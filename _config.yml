@@ -3,10 +3,10 @@
 #
 
 # Name of your site (displayed in the header)
-name: AWS - AutoScaling
+name: Auto Scaling en Amazon Web Services
 
 # Short bio or description (displayed in the header)
-description: AutoScaling en AWS - Proyecto CFGS (Administración de sistemas en Red)
+description: Como auto-escalar tu infraestructura desde un Auto Scaling Group(ASG) a un Clúster con Kubernetes
 
 # URL of your avatar or profile pic (you could use your GitHub profile pic)
 avatar: https://raw.githubusercontent.com/aws-autoscaling/aws-autoscaling.github.io/master/images/icon-proyecto-autoscaling.png
@@ -31,10 +31,6 @@ footer-links:
   youtube: # channel/<your_long_string> or user/<user-name>
   googleplus: # anything in your profile username that comes after plus.google.com/
 
-
-# Enter your Disqus shortname (not your username) to enable commenting on posts
-# You can find your shortname on the Settings page of your Disqus account
-disqus:
 
 # Enter your Google Analytics web tracking code (e.g. UA-2110908-2) to activate tracking
 google_analytics:
