@@ -23,5 +23,5 @@ Posteriormente desplegar un Clúster de Kubernetes sobre AWS, gracias a la herra
 Y por último el otro extremo sería utilizando AWS Fargate, desplegar un chat en tiempo real con socket.io y un redis sobre contenedores. Auto escalando estos en horizontal.
 
 <div>
-<a href="#">Siguiente página</a>
+<a href="#introduction/#id1">Siguiente (Introducción a AWS)</a>
 </div>
