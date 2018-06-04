@@ -60,9 +60,9 @@ La utilización de la línea de comandos de AWS está disponible tanto para [Win
 
 Por otro lado, si utilizamos un sistema operativo como `Debian`, podemos instalar directamente el paquete desde el repositorio oficial de la distribución:
 
-```
+~~~~~~~~
 # apt install awscli
-```
+~~~~~~~~
 
 Posteriormente lanzamos la siguiente instrucción, que lo que hará será pedirnos las Access Keys, la región y el formato de salida de las instrucciones que ejecutemos con AWS CLI. Esto creará en segundo plano, un directorio en el home del usuario “.aws” con dos ficheros que albergarán la información que
 le vamos a pasar, denominados “config” y “credentials”.
