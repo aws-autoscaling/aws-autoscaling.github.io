@@ -1,10 +1,1042 @@
----
-layout: post
-title: You're up and running!
----
 
-Next you can update your site name, avatar and other options using the _config.yml file in the root of your repository (shown below).
+## Índice
 
-![_config.yml]({{ site.baseurl }}/images/config.png)
+* [0. Descripción](#id0)
+* [1. Introducción a AWS](#id1)
+    * [1.1 Creando un usuario para AWS CLI](#id11)
+    * [1.2 Linea de comandos AWS](#id12)
+    * [1.3 Redes - VPC](#id13)
+    * [1.4 Instancias - EC2](#id14)
+    * [1.5 Visualización de métricas - CloudWatch](#id15)
+    * [1.6 Almacenamiento - S3](#id16)
+    * [1.7 Acceso - IAM](#id17)
+* [2. Caso Práctico 1 - Auto Scaling Groups - EC2](#id20)
+    * [2.1 Video Demostrativo](#id21)
+* [3. Kubernetes Operations - Kops](#id30)
+    * [3.1 ¿Qué es Kops?](#id31)
+    * [3.2 Configurando AWS](#id32)
+    * [3.3 Creación del Clúster](#id33)
+    * [3.4 Aspectos a tener en cuenta](#id34)
+    * [3.5 Componentes principales del Clúster](#id35)
+    * [3.6 Actualizando InstancesGroup](#id36)
+    * [3.7 Actualizar la versión del Clúster](#id37)
+    * [3.8 Accediendo al Clúster](#id38)
+    * [3.9 Desplegar una app de prueba](#id39)
+    * [3.10 Alta disponibilidad y Tolerancia a fallos](#id310)
+    * [3.11 Conceciendo de acceso al Clúster](#id311)
+    * [3.12 Eliminar el Clúster](#id312)
+    * [3.13 Desplegar una app de prueba](#id313)
+    * [3.14 Volumenes persistentes](#id314)
+        * [3.14.1 Crear los volumenes en AWS](#id3141)
+        * [3.14.2 Definiendo los volumenes en el Clúster](#id3142)
+        * [3.14.3 Reclamando los volumenes](#id3143)
+* [4. Caso Práctico 2 - Auto Scaler - Kubernetes](#id40)
+* [5. Aplicación Chat con Socket.io](#id50)
+    * [5.1 Requisitos]()
+    * [5.2 Corriendo la aplicación en local]()
+    * [5.3 Construyendo el contenedor docker]()
+    * [5.4 Subiendo la imagen docker al Container Registry]()
+    * [5.5 Desplegando la aplicación desde el Docker Registry]()
+    * [5.6 ]
+* [6. Caso Práctico 3 - Escalando una aplicación en AWS FARGATE](#id60)
+* [7. Conclusiones](#id70)
 
-The easiest way to make your first post is to edit this one. Go into /_posts/ and update the Hello World markdown file. For more instructions head over to the [Jekyll Now repository](https://github.com/barryclark/jekyll-now) on GitHub.
+
+<div id='id0' />
+
+### **0. DESCRIPCIÓN**
+
+En este documento vamos abarcar el problema habitual con el que se encuentran la mayoría de los responsables que tienen a su cargo una aplicación web que tengan picos de demandas puntuales. En los que es muy difícil predecir cuándo va a ocurrir dicho evento, por lo que necesitamos de alguna manera que nuestra infraestructura sea capaz de escalar automáticamente según la necesidad y sin escalar de manera desproporcionada elevando los costos de forma innecesaria.
+
+En este caso siempre vamos a partir como base, como proveedor de nube pública AWS (Amazon Web Services), ya que a día de hoy es una solución muy utilizada tanto como por personas individuales, como por startups.
+
+Partiendo como base con AWS, posteriormente necesitamos otra solución para tener nuestros “servidores”, en la que básicamente nos podemos decantar por dos opciones:
+
+* **Máquinas Virtuales:** es la forma tradicional y donde AWS nos ofrece su propio servicio denominado EC2, donde las usaremos junto con algo que se hace llamar `Auto Scaling Groups`.
+* **Contenedores:** esto que se está poniendo tan de moda ahora y escuchamos en todos lados, para los usuarios que se hayan decantado o quieran pasar su aplicación a contenedores, también veremos unos ejemplos prácticos con:
+    * **Kops:** para crear y administrar tu propio clúster `Kubernetes` sobre AWS, y pudiendo así auto-escalar tu aplicación con contenedores.
+    * **AWS Fargate:** es la solución que proporciona AWS, donde te olvidas completamente de tener que administrar o saber cómo funciona el clúster y te centras sencillamente en tu aplicación y las características que debe tener a la hora de desplegarse.
+
+Así que, para poder entender mejor las diferentes soluciones, me parece más que interesante empezar por una introducción con los principales componentes de AWS, desde la línea de comandos a través de la AWS CLI.
+Posteriormente desplegar un Clúster de Kubernetes sobre AWS, gracias a la herramienta Kops. Donde también vamos a auto escalar a nivel de infraestructura (nodos).
+Y por último el otro extremo sería utilizando AWS Fargate, desplegar un chat en tiempo real con socket.io y un redis sobre contenedores. Auto escalando estos en horizontal.
+
+
+<div id='id1' />
+
+### **1. INTRODUCCIÓN A AWS**
+
+Lo primero e imprescindible es tener una cuenta en AWS, Amazon te ofrece una capa gratuita el primer año después de haberte registrado, dispones de un tipo de instancia EC2, donde si no superas un máximo de 700 horas con la instancia encendida al mes, es `gratis`.
+
+Por otro lado, también te dan de manera gratuita un máximo de 20.000 peticiones (gets) y 2.000 peticiones (puts) al servicio S3 con un máximo de almacenamiento en dicho servicio de 5 GiB, hasta 30 GiB de espacio en volúmenes con su servicio EBS, 750 horas de uso y 15 GiB de procesamiento de datos por el servicio ELB. Todo esto mensualmente durante el primer año desde la inscripción, donde es más que suficiente para aprender a utilizar los componentes principales.
+
+Por lo tanto, el primer paso es registrarnos en AWS, en el proceso nos pedirán una tarjeta de crédito por si nos pasáramos en alguno de los límites de la capa “Free Tier”, hacernos el cargo correspondiente al
+uso realizado en la plataforma.
+
+Una vez registrados, ya podremos acceder a los servicios desde la consola de administración de aws con dicha cuenta, pero si queremos hacer uso de AWS CLI necesitamos generar unas Access Keys para realizarle las correspondientes llamadas a la API de AWS.
+
+<div id='id11' />
+
+### **1.1. CREANDO UN USUARIO PARA AWS CLI**
+
+Si no queremos buscar el servicio “IAM” en el panel frontal, podemos simplemente escribirlo en el buscador:
+
+<p align="center">
+    <img src="https://charliejsanchez.com/wp-content/uploads/2018/05/ProyectoAWS-1.png" alt="New User With IAM">
+</p>
+Seguidamente, en la barra lateral izquierda, seleccionar en “Users” y luego a “Add User”:
+
+<p align="center">
+    <img src="https://charliejsanchez.com/wp-content/uploads/2018/05/ProyectoAWS-2.png" alt="Add User With IAM">
+</p>
+
+En el siguiente paso introducir el nombre para el nuevo usuario y seleccionar que dicho usuario sea del tipo “Programmatic access”:
+
+<p align="center">
+    <img src="https://charliejsanchez.com/wp-content/uploads/2018/05/ProyectoAWS-3.png" alt="Programmatic Access IAM">
+</p>
+
+Luego importante, adjuntarle al usuario los permisos correspondientes, en este caso vamos a seleccionar una “policy”que tiene permiso absoluto sobre todos los servicios de AWS, pero esto no es una buena práctica, de todas formas, para el apartado de Introducción a los componentes vamos a dejarlo así,pero a la hora de crear un usuario para el despliegue de Kubernetes, si haremos esto correctamente.
+
+<p align="center">
+    <img src="https://charliejsanchez.com/wp-content/uploads/2018/05/ProyectoAWS-4.png" alt="Attach policy IAM">
+</p>
+
+En la siguiente pantalla nos aparecerá una preview del usuario que vamos a crear, si todo está bien, procedemos a la creación del usuario.
+
+<p align="center">
+    <img src="https://charliejsanchez.com/wp-content/uploads/2018/05/ProyectoAWS-5.png" alt="Access Keys IAM">
+</p>
+
+> **IMPORTANTE**: Anotar la Access Secret Key, ya que está, no será accesible posteriormente a su creación.
+
+
+<div id='id12' />
+
+### **1.2. LÍNEA DE COMANDOS AWS**
+
+La utilización de la línea de comandos de AWS está disponible tanto para [Windows](https://docs.aws.amazon.com/es_es/cli/latest/userguide/awscli-install-windows.html), [macOS](https://docs.aws.amazon.com/es_es/cli/latest/userguide/cli-install-macos.html) y [Linux](https://docs.aws.amazon.com/es_es/cli/latest/userguide/awscli-install-linux.html). En este último existen varias maneras de instalarlo, la página web oficial explica la instalación con pip, las imágenes de Amazon Linux por ejemplo ya llevan instaladas la CLI de AWS.
+
+Por otro lado, si utilizamos un sistema operativo como `Debian`, podemos instalar directamente el paquete desde el repositorio oficial de la distribución:
+
+```
+# apt install awscli
+```
+
+Posteriormente lanzamos la siguiente instrucción, que lo que hará será pedirnos las Access Keys, la región y el formato de salida de las instrucciones que ejecutemos con AWS CLI. Esto creará en segundo plano, un directorio en el home del usuario “.aws” con dos ficheros que albergarán la información que
+le vamos a pasar, denominados “config” y “credentials”.
+
+```
+# aws configure
+AWS Access Key ID [****************YRRA]: AKIAIMERB67B56OERWGQ
+AWS Secret Access Key [****************L1vW]: XXXXXXXXXXXXXXXX
+Default region name [eu-west-1]: eu-west-1
+Default output format [None]: json
+```
+
+Si mostramos el contenido de los ficheros que se han nombrado antes, vemos como no era mentira. Pero cabe destacar que, si utilizamos variables de entorno para definir estos valores, se utilizaran estos antes que los definidos en los ficheros:
+
+```
+# cat ~/.aws/credentials
+[default]
+aws_secret_access_key = XXXXXXXXXXXXXX
+aws_access_key_id = AKIAIMERB67B56OERWGQ
+```
+Y:
+
+```
+~ cat ~/.aws/config
+[default]
+region = eu-west-1
+output = json
+```
+
+Si ahora probáramos a listar las instancias EC2 que tenemos lanzadas nos debería devolver la siguiente salida:
+
+```
+# aws ec2 describe-instances
+{
+   Reservations": []
+}
+```
+
+<div id='id13' />
+
+### **1.3. Redes - VPC**  
+![VPC Image](https://raw.githubusercontent.com/carlosjsanch3z/proyectoaws/master/assets/img/VPC.png)
+
+La traducción de las siglas corresponde a “Virtual Private Cloud”, lo que podríamos decir que este componente simula una red privada o como si fuera nuestra propia red dentro de un centro de datos. Sería un segmento de red aislado de las otras VPC’s que tuviéramos creadas.
+
+Por lo que cabe deducir es inevitable tener al menos 1 VPC en nuestra cuenta de AWS y tal es así, que
+por defecto nos trae una VPC creada. Nosotros mismos podemos escoger el direccionamiento de red privado hasta un máximo de un CIDR /16, dentro de la VPC podemos segmentar y crear subnets según nuestra necesidad.
+
+Las subnets pueden ser privada o públicas, por ejemplo, supongamos que nuestra aplicación tiene una parte web y otra con la base de datos. Para mayor seguridad y mejor práctica se colocaría la base de datos en una subnet privada, donde solo tendría permiso de acceso las instancias que se crearán en una subnet publica en concreto y prohibiendo el acceso remoto desde fuera hacia la base de datos. A estas últimas instancias que se levantarán dentro de la subnet pública se les repartiría de forma automática direccionamiento IP público.
+
+Otro detalle es que las VPC se ubican dentro de una región y las subnets se localizan dentro de una zona
+de disponibilidad. Se pueden crear subnets siempre y cuando no superemos el límite del direccionamiento de red elegido a
+la hora de crear la VPC, por lo tanto, es algo bastante importante ya que una mala elección nos limitaría en el futuro. Como hemos comentado antes, tienen un alcance zonal, lo que quiere decir es que, si hemos creado nuestra VPC en la región de Irlanda, la subnet se deberá crear en una de las zonas de disponibilidad disponibles en esta región. Una subnet solo puede ubicarse en una zona de disponibilidad y esto no puede ser modificado después de su creación.
+
+**A crear:** 1 VPC con 2 Subnets públicas y 2 Subnets privadas en dos AZ diferentes:
+<p align="center">
+    <img src="https://raw.githubusercontent.com/carlosjsanch3z/proyectoaws/master/assets/img/VPC%26Subnets.png" alt="Diagrama VPC - Subnets">
+</p>
+
+Partiendo del diagrama anterior, vamos a proceder a su creación desde la línea de comandos:
+
+Primero crear la VPC:
+
+```
+aws ec2 create-vpc --cidr-block 10.0.0.0/16 --output json
+```
+Resultado:
+```
+{
+    "Vpc": {
+        "VpcId": "vpc-fd6f139b", 
+        "InstanceTenancy": "default", 
+        "Tags": [], 
+        "CidrBlockAssociationSet": [
+            {
+                "AssociationId": "vpc-cidr-assoc-8379e7e8", 
+                "CidrBlock": "10.0.0.0/16", 
+                "CidrBlockState": {
+                    "State": "associated"
+                }
+            }
+        ], 
+        "Ipv6CidrBlockAssociationSet": [], 
+        "State": "pending", 
+        "DhcpOptionsId": "dopt-e9668e8f", 
+        "CidrBlock": "10.0.0.0/16", 
+        "IsDefault": false
+    }
+}
+```
+A continuación podemos etiquetar la VPC con un nombre, para identificarla más facilmente:
+
+```
+aws ec2 create-tags --resources "vpc-fd6f139b" \
+    --tags Key=Name,Value="proyectoaws"
+```
+
+Ahora necesitamos crear las subnets:
+
+**Subnet - public1:**
+
+```
+# aws ec2 create-subnet --cidr-block "10.0.1.0/24" \
+    --availability-zone "eu-west-1a" --vpc-id "vpc-fd6f139b"
+{
+    "Subnet": {
+        ...
+        "AvailabilityZone": "eu-west-1a", 
+        "VpcId": "vpc-fd6f139b",  
+        "SubnetId": "subnet-88c87aee", 
+        ...
+    }
+}
+```
+Etiquetamos dicha subnet con su nombre, cogiendo el id de la Subnet:
+```
+# aws ec2 create-tags --resources "subnet-88c87aee" \
+    --tags Key=Name,Value="public1"
+```
+**Subnet - public2:**
+
+En la subnet public2 debemos cambiar la zona disponibilidad, el direccionamiento de red y etiquetarla con su nombre correspondiente:
+
+```
+# aws ec2 create-subnet --cidr-block "10.0.2.0/24" \ 
+    --availability-zone "eu-west-1b" --vpc-id "vpc-fd6f139b"
+{
+    "Subnet": {
+        ...
+        "AvailabilityZone": "eu-west-1b", 
+        "VpcId": "vpc-fd6f139b",
+        "SubnetId": "subnet-2364e76b", 
+        ...
+    }
+}
+# aws ec2 create-tags --resources "subnet-2364e76b" \
+    --tags Key=Name,Value="public2"
+```
+
+**Subnet - privada1:**
+
+```
+aws ec2 create-subnet --cidr-block "10.0.3.0/24" \ 
+    --availability-zone "eu-west-1a" --vpc-id "vpc-fd6f139b"
+
+{
+    "Subnet": {
+        ...
+        "AvailabilityZone": "eu-west-1a", , 
+        "VpcId": "vpc-fd6f139b",  
+        "SubnetId": "subnet-6db1030b", 
+        ...
+    }
+}
+
+aws ec2 create-tags --resources "subnet-6db1030b" \
+    --tags Key=Name,Value="private1"
+```
+**Subnet - privada2:**
+
+```
+aws ec2 create-subnet --cidr-block "10.0.4.0/24" \ 
+    --availability-zone "eu-west-1b" --vpc-id "vpc-fd6f139b"
+
+{
+    "Subnet": {
+        ...
+        "AvailabilityZone": "eu-west-1b", , 
+        "VpcId": "vpc-fd6f139b",  
+        "SubnetId": "subnet-4a61e202", 
+        ...
+    }
+}
+
+aws ec2 create-tags --resources "subnet-4a61e202" \
+    --tags Key=Name,Value="private2"
+```
+
+Ahora para que realmente las subnets públicas, sean públicas de verdad, tendremos que habilitarles a ambas la opción de que automaticamente a los recursos que se creen en la subnet, se le asignen IP's públicas:
+
+```
+aws ec2 modify-subnet-attribute \
+--subnet-id "subnet-88c87aee" --map-public-ip-on-launch
+
+aws ec2 modify-subnet-attribute \
+--subnet-id "subnet-2364e76b" --map-public-ip-on-launch
+```
+
+
+
+
+
+## **CONTINUARÁ**
+
+<div id='id9'/>
+
+### **3. KUBERNETES OPERATIONS - KOPS**
+
+¿Qué es Kubernetes?, para abreviar solamente diré que es un sistema open source creado para la gestión de aplicaciones en contenedores o, dicho de otra forma, es un sistema de orquestación para contenedores. Permitiendo acciones como programar el despliegue, escalado o la monitorización de ellos, entre muchas otras más.
+En internet hay mucha información sobre k8s ;).
+
+<div id='id10'/>
+
+### **3.1. ¿QUÉ ES KOPS?**
+
+Si visitas la página del [proyecto de kops](https://github.com/kubernetes/kops), lo primero que lees es
+que es la manera más fácil de poner en funcionamiento un cluster Kubernetes en producción. Según la opinión de algunos usuarios en internet y la mía es que esta frase es cierta, siempre y cuando se excluya Google Kubernetes Engine (GKE).
+
+A fecha de la redacción de este documento (Mayo de 2018), otros proveedores de hosting todavía no han publicado su solución Kubernetes-as-a-service. El servicio Elastic Container de Amazon para Kubernetes (EKS) aún no está abierto al público.
+
+El servicio Azure Container es también otra opción, que está disponible desde 2015 pero según he leído tiene algunos puntos débiles. Por lo tanto, sigo pensando que kops es la mejor manera de conseguir tener funcionando kubernetes en
+producción. Ya que tiene casi el mismo nivel de complejidad, pero sin perder el control de lo que queremos y cómo lo queremos en cada momento. Nos permite ajustar más el cluster a nuestra necesidad de lo que nos sería posible con soluciones incluidas en el hosting. Es completamente de
+código abierto, puede almacenarse en control de versiones y no está diseñado para encerrarse en un proveedor de hosting.
+Así que en el caso de que nuestro proveedor de hosting sea AWS, kops es la mejor opción para crear un cluster de kubernetes. Si es cierto que GKE funciona también muy bien y esto daría para un debate bastante largo.
+
+Se espera que kops se extienda a otros proveedores. Si no me equivoco VMWare está en Alfa o podría estar ya estable y se ha añadido soporte para Azure y Digital Ocean. En el próximo apartado vamos a crear un cluster de kubernetes en AWS con kops.
+
+Kops nos permite crear un clúster de Kubernetes de producción. Lo que quiere decir que no solo podemos para crear el cluster en sí, sino también podemos actualizarlo sin necesidad de que exista inactividad en ningún momento o eliminarlo si ya no va hacer necesario. Un clúster no se puede denominar “production grade” a menos que este se encuentre en alta disponibilidad y tolerante a fallos.
+Deberíamos de poder ejecutar todo esto desde una línea de comandos si quisiéramos automatizarlo.
+
+Esto y otras cosas más hacen de kops una herramienta excelente para este fin.Kops sigue la misma filosofía que Kubernetes, donde creamos un conjunto de objetos JSON o YAML que se enviarán a los controladores y estos crean el clúster.
+
+Más adelante detallaremos lo que Kops puede y no puede hacer. De momento en el próximo apartado veremos los requisitos previos para la instalación del clúster.
+
+<div id='id32' />
+
+### **3.2. CONFIGURANDO AWS**
+
+Llegados a este punto debo de suponer que se dispone de una cuenta en AWS, si no es así, lo primero que debemos hacer es registrarnos en [Amazon Web Services](https://portal.aws.amazon.com/billing/signup?redirect_url=https%3A%2F%2Faws.amazon.com%2Fregistration-confirmation&language=es_es#/start).
+
+Posteriormente necesitamos conseguir nuestras credenciales de AWS, para ello si ya nos hemos registrado, abrimos la [consola de Amazon EC2](https://signin.aws.amazon.com/signin?redirect_uri=https%3A%2F%2Fconsole.aws.amazon.com%2Fconsole%2Fhome%3Fstate%3DhashArgs%2523%26isauthcode%3Dtrue&client_id=arn%3Aaws%3Aiam%3A%3A015428540659%3Auser%2Fhomepage&forceMobileApp=0) y hacemos clic en el menú de la parte superior derecha de la página:
+
+### **IMAGENES A CARGAR**
+
+> **NOTA:** por seguridad es recomendable almacenar este fichero en un lugar seguro con los permisos adecuados y no compartirlo con nadie a ser posible.
+
+El siguiente paso es colocar las claves en variables de entorno que serán usadas por la interfaz de línea de comando de AWS.
+
+```
+export AWS_ACCESS_KEY_ID=AKIAJUMCPSYBTOBWKBWQ
+export AWS_SECRET_ACCESS_KEY=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+```
+
+Amazon EC2 está alojada en múltiples ubicaciones en todo el mundo. Estas ubicaciones están compuestas por regiones y zonas de disponibilidad. Cada región es un área geográfica separada, compuesta de múltiples ubicaciones aisladas conocidas como zonas de disponibilidad.Amazon EC2 nos proporciona la capacidad de colocar recursos, como instancias y datos en múltiples ubicaciones.
+
+Así que es necesario definir la variable de entorno `AWS_DEFAULT_REGION` que se encarga de decirle a AWS CLI que región nos gustaría que se use por defecto.
+
+```
+export AWS_DEFAULT_REGION=eu-west-1
+```
+
+Es posible cambiar el valor de la variable a cualquier región, o por lo menos que tenga tres zonas de disponibilidad. Más adelante se discutirá las razones por las que se usará la región `eu-west-1` y la
+necesidad de tener varias zonas de disponibilidad.
+
+A continuación, vamos a crear algunos recursos de Gestión de identidades y accesos (IAM). Aunque se pueda crear el clúster con el usuario que utilizamos para registrarnos en AWS, es una buena práctica
+crear una cuenta a parte que contenga solo los privilegios necesarios para ejecutar las siguientes instrucciones.
+
+Primero, vamos a crear un grupo IAM llamado `kops`.
+
+```
+aws iam create-group --group-name kops
+```
+
+La salida al comando anterior debe ser parecida a esta:
+
+```
+{
+	"Group": {
+    	"GroupName": "kops",
+    	"Path": "/",
+    	"Arn": "arn:aws:iam::826764960316:group/kops",
+    	"CreateDate": "2018-04-26T21:22:36.386Z",
+    	"GroupId": "AGPAJ4GHUTOAPSH2JASRC"
+	}
+}
+```
+
+La información que devuelve el resultado no es de mucha importancia, a excepción de ver que no contiene ningún mensaje de error y la confirmación de que el grupo se creó con éxito.
+
+A continuación, asignaremos algunas políticas al grupo creado, proporcionando así a los futuros usuarios
+que se agreguen a dicho grupo los permisos suficientes para crear los objetos que necesitaremos.
+
+Desde que el clúster básicamente consiste en instancias de EC2, el grupo necesitará permisos para poder crearlas y administrarlas. Por otro lado, necesitaremos un lugar para almacenar el estado del clúster, necesitando así acceso al servicio S3 de Amazon.
+
+Además, necesitamos agregar permisos del servicio VPC para que kops pueda configurar la red del clúster. Finalmente necesitaremos también poder crear IAM adicionales. En AWS, los permisos de usuario se otorgan mediante la creación de políticas. Necesitaremos las
+siguientes:
+
+* AmazonEC2FullAccess
+* AmazonS3FullAccess
+* AmazonVPCFullAccess
+* IAMFullAccess
+
+Los siguientes comandos adjuntos, asocian las diferentes políticas al grupo `kops`:
+
+```
+aws iam attach-group-policy --group-name kops \
+    --policy-arn arn:aws:iam::aws:policy/AmazonEC2FullAccess
+aws iam attach-group-policy --group-name kops \
+    --policy-arn arn:aws:iam::aws:policy/AmazonS3FullAccess
+aws iam attach-group-policy --group-name kops \
+    --policy-arn arn:aws:iam::aws:policy/AmazonVPCFullAccess
+aws iam attach-group-policy --group-name kops \
+    --policy-arn arn:aws:iam::aws:policy/IAMFullAccess
+```
+
+Una vez tenemos el grupo con los permisos suficientes, podemos crear el nuevo usuario que se añadirá a este.
+
+```
+aws iam create-user --user-name kopsuser
+```
+
+Salida de la ejecución anterior:
+
+```
+{
+	"User": {
+    	"UserName": "kopsuser",
+    	"UserId": "AIDAJUSIR5SBAPPN76LOS",
+    	"CreateDate": "2018-05-09T09:10:27.272Z",
+    	"Path": "/",
+    	"Arn": "arn:aws:iam::826764960316:user/kopsuser"
+	}
+}
+```
+
+Ahora sí, añadimos a dicho usuario al grupo kops:
+
+```
+# aws iam add-user-to-group --user-name kopsuser --group-name kops
+```
+
+Finalmente, necesitaremos unas claves de acceso para el nuevo usuario que hemos creado. Sin ellas, no podríamos actuar el nombre de dicho usuario.
+
+```
+aws iam create-access-key \
+    --user-name kopsuser > kops-credentials
+```
+
+Las claves de acceso se han creado y almacenado en el fichero con el nombre que le hemos indicado `kops-credentials`. Si echamos un vistazo al contenido del fichero:
+
+```
+# cat kops-credentials
+```
+
+Contenido del fichero:
+
+```
+{
+	"AccessKey": {
+    	"SecretAccessKey": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXS5os",
+    	"UserName": "kopsuser",
+    	"CreateDate": "2018-05-09T09:17:45.531Z",
+    	"Status": "Active",
+    	"AccessKeyId": "XXXXXXXXXXXXXXXX5CQ"
+	}
+}
+```
+
+Ahora necesitamos tomar el valor de las entradas `SecretAccessKey` y `AccessKeyId`. 
+
+El siguiente paso es parsear el contenido del fichero kops-credentials y almacenar los dos valores como variables de entorno `AWS_ACCESS_KEY_ID` y `AWS_SECRET_ACCESS_KEY`.
+
+Para automatizar aún más vamos hacer uso de [jq](https://stedolan.github.io/jq/) para parsear el contenido json del fichero.
+
+Desde el enlace podemos descargar el código fuente para linux, OS X, Windows u otras plataformas. En mi caso voy a instalarlo desde la paquetería oficial de Debian Stretch:
+
+```
+# apt update
+# apt install jq
+```
+
+Versión utilizada:
+
+```
+jq-1.5-1-a5b5cbe
+```
+
+Procedemos a exportar ambos valores:
+
+```
+export AWS_ACCESS_KEY_ID=$(\
+cat kops-credentials | jq -r \
+'.AccessKey.AccessKeyId')
+```
+
+export AWS_SECRET_ACCESS_KEY=$(
+cat kops-credentials | jq -r \
+'.AccessKey.SecretAccessKey')
+
+> **Nota**: hemos utilizado el comando cat para mostrar el contenido del fichero, combinado con jq para filtrar la entrada solo del campo que hemos indicado.
+
+A partir de ahora todos los comandos de AWS CLI no serán ejecutados con el usuario administrador de
+nuestra cuenta, si no con el nuevo usuario que hemos registrado denominado `kopsuser`.
+
+El siguiente paso será decidir qué zonas de disponibilidad vamos a usar, para ello podemos ver las zonas disponibles dentro de la región que hemos pasado por la variable, en este caso `eu-west-1`.
+
+```
+aws ec2 describe-availability-zones
+--region $AWS_DEFAULT_REGION
+```
+
+Salida del comando anterior:
+
+```
+{
+	"AvailabilityZones": [
+    	{
+        	"State": "available",
+        	"ZoneName": "eu-west-1a",
+        	"Messages": [],
+        	"RegionName": "eu-west-1"
+    	},
+    	{
+        	"State": "available",
+        	"ZoneName": "eu-west-1b",
+        	"Messages": [],
+        	"RegionName": "eu-west-1"
+    	},
+    	{
+        	"State": "available",
+        	"ZoneName": "eu-west-1c",
+        	"Messages": [],
+        	"RegionName": "eu-west-1"
+    	}
+	]
+}
+```
+
+Como podemos ver existen tres zonas de disponibilidad, que vamos a almacenarlas en una variable de
+entorno:
+
+```
+export ZONES=$(aws ec2 \
+describe-availability-zones \
+--region $AWS_DEFAULT_REGION \
+| jq -r \
+'.AvailabilityZones[].ZoneName' \
+| tr '\n' ',' | tr -d ' ')
+ZONES=${ZONES%?}
+echo $ZONES
+```
+Al igual que con las variables de entorno anteriores, usamos jq para limitar el resultado solamente a los
+nombres de las zonas, y combinamos eso con tr para reemplazar los saltos de línea con comas. La siguiente instrucción elimina la coma al final de la lista.
+
+Salida de la variable de entorno:
+
+```
+eu-west-1a,eu-west-1b,eu-west-1c
+```
+
+El último paso para empezar a crear el cluster, es crear un par de claves para hacer la conexión SSH y
+acceder a las instancias EC2. Vamos a crear un directorio dedicado para la creación del cluster.
+
+```
+# mkdir -p cluster
+# cd cluster
+```
+
+Creamos las claves SSH con el comando `aws ec2`:
+
+```
+aws ec2 create-key-pair \
+--key-name proyecto \
+| jq -r '.KeyMaterial' \
+>proyecto.pem
+```
+
+Hemos creado el par de claves nuevo, filtrando la salida solamente con el campo `KeyMaterial`, y almacenandolo en un fichero llamado `proyecto.pem`.
+
+Por razones de seguridad cambiamos los permisos del fichero para que solo pueda ser leído por el
+usuario actual:
+
+```
+# chmod 400 proyecto.pem
+```
+
+Finalmente, solo necesitamos el segmento público de las claves generada, para extraer dicha parte usaremos ssh-keygen:
+
+```
+ssh-keygen -y -f proyecto.pem \
+>proyecto.pub
+```
+Llegados a este punto ya podemos saltar a la creación del cluster de Kubernetes.
+
+<div id='id33' />
+
+### **3.3. CREACIÓN DEL CLÚSTER**
+
+Para empezar, es necesario decidir un nombre para el cluster. Por ejemplo proyecto.k8s.local. La
+última parte (.k8s.local) es obligatoria si no disponemos de un DNS a mano. Kops utiliza este nombre de
+forma convencional ya que se basa en gossip para descubrir a los nodos dentro del cluster, digamos que
+hace el proceso de DNS de manera gratuita y mucho más simple.
+
+Vamos almacenar el nombre en una variable de entorno para poder acceder a él más fácilmente en un
+futuro.
+
+```
+export NAME=proyecto.k8s.local
+```
+
+Como hemos dicho es necesario almacenar el estado en algún lugar, en AWS la única opción a día de hoy
+para almacenar dicha información son los buckets de Amazon S3.
+
+Asignamos un nombre para el bucket en una variable de entorno:
+
+```
+export BUCKET_NAME=proyecto-$(date +%s)
+```
+
+Para crear el bucket en AWS, utilizamos la siguiente instrucción:
+
+```
+aws s3api create-bucket \
+--bucket $BUCKET_NAME \
+--create-bucket-configuration \
+LocationConstraint=$AWS_DEFAULT_REGION
+```
+
+La salida sería como esta:
+
+```
+{
+    "Location": "http://proyecto-1527665818.s3.amazonaws.com/";
+}
+```
+
+Ahora por comodidad, definiremos otra variable de entorno `KOPS_STATE_STORE`. Que usaremos para
+indicar dónde vamos a guardar el estado, para evitar tener que pasarle el argumento `--store` cada vez
+que ejecutemos kops.
+
+```
+export KOPS_STATE_STORE=s3://$BUCKET_NAME
+```
+
+Ahora nos falta, tener instalado kops. En mi caso como usuario linux, sería de la siguiente forma:
+
+```
+curl -LO https://github.com/kubernetes/kops/releases/download/$(curl -s
+https://api.github.com/repos/kubernetes/kops/releases/latest | grep tag_name | cut -d &#39;&quot;&#39; -f
+4)/kops-linux-amd64
+chmod +x kops-linux-amd64
+sudo mv kops-linux-amd64 /usr/local/bin/kop
+```
+
+El comando para crear el cluster es el siguiente:
+
+```
+kops create cluster \
+    --name $NAME \
+    --master-count 3 \
+    --node-count 1 \
+    --node-size t2.small \
+    --master-size t2.small \
+    --zones $ZONES \
+    --master-zones $ZONES \
+    --ssh-public-key proyecto.pub \
+    --networking kubenet \
+    --kubernetes-version v1.8.4 \
+    --authorization RBAC \
+    --yes
+```
+
+Hemos especificado que el cluster debe tener tres nodo masters y un nodo worker. Podemos siempre
+incrementar el número de workers, pero no es necesario empezar con más de los que necesitamos en
+este momento.
+
+El tamaño de los nodos son `t2.small`. Y ambos tipos de nodos se extenderán a través de las tres zonas de
+disponibilidad que le especificamos desde la variable de entorno `$ZONES`. Más adelante hemos definido
+la clave pública y el tipo de red.
+
+Con el argumento `--kubernetes-version` podemos ejecutar la versión que queremos de kubernetes
+exactamente. Si no indicamos este argumento, obtendremos la última versión considerada estable por
+kops.
+
+Por defecto si no se especifica el argumento --authorization el valor que coge es `AlwaysAllow`. Como
+intentamos simular un cluster en producción utilizaremos el valor `RBAC`.
+
+El argumento --yes especifica que el clúster debe crearse inmediatamente. Si no lo especificamos, kops
+solo actualizará el estado en el bucket S3. Y nos faltaría ejecutar kops apply para crear el clúster en
+dos pasos. Esto dependerá de lo impaciente que seamos.
+
+La salida a la creación del clúster seria algo así:
+
+```
+Cluster is starting. It should be ready in a few minutes.
+
+Suggestions:
+* validate cluster: kops validate cluster
+* list nodes: kubectl get nodes --show-labels
+* ssh to the master: ssh -i ~/.ssh/id_rsa admin@api.proyecto.k8s.local
+* the admin user is specific to Debian. If not using Debian please use the appropriate user
+based on your OS.
+* read about installing addons at:
+https://github.com/kubernetes/kops/blob/master/docs/addons.md.
+```
+
+Se puede ver como el nuevo contexto de kubectl es ahora el nombre de nuestro cluster y aparece una
+serie de sugerencias a realizar después de que finalice la creación del cluster.
+
+Ahora con kops podemos capturar la información sobre el nuevo cluster que hemos creado:
+
+```
+kops get cluster
+```
+
+Salida:
+
+```
+NAME CLOUD ZONES
+proyecto.k8s.local aws eu-west-1a,eu-west-1b,eu-west-1c
+```
+Esta última información nos dice bien poco, ya que nos informa de algo que ya sabíamos como el
+nombre de el cluster y las zonas en las que está corriendo.
+
+**Kubectl**
+
+Para obtener más información sobre el cluster y poder interactuar más con él, vamos a instalar la herramienta `kubectl`.
+
+Para `Debian/Ubuntu` bastaría con las siguientes instrucciones:
+
+```
+apt-get update &amp;&amp; apt-get install -y apt-transport-https
+curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
+cat &lt;&lt;EOF &gt;/etc/apt/sources.list.d/kubernetes.list
+deb http://apt.kubernetes.io/ kubernetes-xenial main
+EOF
+apt-get update
+apt-get install -y kubectl
+```
+
+Ahora si ejecutamos:
+
+```
+kubectl cluster-info
+```
+
+Salida:
+
+```
+Kubernetes master is running at https://api-proyecto-k8s-local-oiqnes-1174920048.eu-west-
+1.elb.amazonaws.com
+KubeDNS is running at https://api-proyecto-k8s-local-oiqnes-1174920048.eu-west-
+1.elb.amazonaws.com/api/v1/namespaces/kube-system/services/kube-dns:dns/proxy
+
+To further debug and diagnose cluster problems, use 'kubectl cluster-info dump'.
+```
+
+En esta salida si podemos ver como tanto el master como KubeDNS estan corriendo. Lo que significa
+probablemente que el cluster esté listo. Si no apareciera KubeDNS habria que esperar posiblemente
+unos minutos más.
+Podemos obtener información más detalla sobre el cluster a través del comando:
+
+```
+kops validate cluster
+```
+
+Salida:
+
+```
+Using cluster from kubectl context: proyecto.k8s.local
+Validating cluster proyecto.k8s.local
+INSTANCE GROUPS
+NAME ROLE MACHINETYPE MIN MAX SUBNETS
+master-eu-west-1a Master t2.small 1 1 eu-west-1a
+master-eu-west-1b Master t2.small 1 1 eu-west-1b
+master-eu-west-1c Master t2.small 1 1 eu-west-1c
+nodes Node t2.small 1 1 eu-west-1a,eu-west-1b,eu-west-1c
+NODE STATUS
+NAME ROLE READY
+ip-172-20-103-129.eu-west-1.compute.internal master True
+ip-172-20-32-160.eu-west-1.compute.internal master True
+ip-172-20-78-110.eu-west-1.compute.internal master True
+ip-172-20-94-116.eu-west-1.compute.internal node True
+Your cluster proyecto.k8s.local is ready
+```
+
+Esta salida parece ser más útil, y podemos ver como se ha formado el cluster por las 4 instancias, los 3
+nodos maestros y el nodo worker. Más concretamente según los términos de AWS. Tenemos un auto-
+scaling group por cada nodo master y otro para todos los nodos workers que existan.
+
+La causa por la que cada nodo master se encuentre solo en un auto-scaling group es la manera de
+garantizar que cada uno se ejecuta en su propia zona de disponibilidad. Garantizando así que si existe
+un fallo en la zona de disponibilidad no afecte solo a un nodo master. Los nodos workers no están
+restringidos a un AZ específico. AWS colocará los nodos en cualquier AZ que esté disponible al azar.
+
+La última línea que aparece en la salida del comando anterior indica que el cluster está listo.
+En la siguiente imagen podemos ver la estructura que acabamos de comentar.
+
+![Figura 6]()
+
+Realmente hay muchos más componentes de los que se muestran en la imagen, así que intentaremos
+desglosarlos uno a uno cada uno de los componentes que ha creado kops por nosotros en uno de los próximos apartados.
+
+
+<div id='id34' />
+
+### **3.4. ASPECTOS A TENER EN CUENTA**
+
+Llegados a este punto estamos listos para crear un clúster, pero vamos a estudiar los aspectos a tener
+en cuenta según nuestro escenario.
+
+Las siguientes elecciones son importantes ya que de no elegir la correcta, podría impedirnos a la hora de
+lograr los objetivos que podamos tener.
+
+La primera pregunta que se puede realizar es, ¿queremos tener alta disponibilidad? A priori lo lógico es
+decir que sí y sería extraño si alguien respondiera que no. En cambio nos preguntaremos qué cosas
+pueden hacer que nuestro clúster disminuya.
+
+**Número de nodo masters**
+
+Cuando un nodo es destruido, Kubernetes reprograma todas las aplicaciones que se están ejecutando
+dentro de los nodos “sanos”. Todo lo que habría que hacer es crear un nuevo servidor y añadirlo al
+cluster, consiguiendo así que la capacidad vuelva a los valores deseados.
+
+Aún así esto sería crítico si el servidor que falló era el único master, no habría clúster al que poder
+añadir más servidores. Ya que estos son los que alojan los componentes críticos sin los cuales
+Kubernetes no podría operar.
+
+Y entonces ¿bastaría con tener dos masters? pues parece ser que no, que a pesar de que si uno fallará,
+existiera todavía un nodo master, el cluster no funcionaría.
+
+Cada información que ingresa en un nodo master, se debe propagar a los demás masters existentes, y
+sólo después de que se haya establecido la mayoría, se confirma esa información.
+
+Por lo tanto en el caso de existir solo 2 nodo masters, si perdiéramos la mayoría (50%+1), los nodos
+masters no podrían llegar a un “acuerdo” y no podrían operar. Si falla uno de los dos nodos podemos
+obtener solamente la mitad de votos. Siendo así necesario tener mínimo tres nodos master o más.
+
+Los **números impares mayores que uno** son números **“mágicos”**. Si no vamos a crear un gran cluster
+nos valdría con tres nodo master solamente, para echar a funcionar el clúster.
+
+Con tres nodos maestros, estamos a salvo de un fallo proveniente de alguno de ellos. Ya que los
+servidores que fallen serán reemplazados por otros nuevos, siempre que falle solamente un nodo
+maestro a la vez, antes de poder ser sustituido, podríamos decir que nuestro cluster es tolerante a fallos
+y está en alta disponibilidad.
+
+**¿Todo en un mismo CPD?**
+
+Otra lógica a tener en cuenta es, ¿de qué vale tener múltiples nodos maestros, si se encuentran todos en
+el mismo centro de datos y este último se cae?.
+
+Es imposible garantizar que un centro de datos no va a sufrir una interrupción de algún tipo nunca.
+Entonces, necesitamos más de un centro de datos. Siguiendo con la lógica anterior sabes que
+necesitamos al menos tener tres nodos masters. Pero, resulta casi imposible tener tres o más centros de
+datos. Si estos están demasiado separados, la latencia entre ellos podría ser demasiado alta. Dado que
+cada información se propaga a todos los nodos maestros dentro del clúster, la lenta comunicación entre
+los centros de datos supondría un impacto severo en el cluster.
+
+Por lo tanto necesitamos tres centros de datos que estén lo suficientemente cerca para proporcionar
+una latencia baja, pero sin embargo, físicamente separados, de modo que si falla uno, no afecte a los
+demás. Como estamos a punto de crear el clúster en AWS, tenemos la posibilidad de utilizar las zonas de
+disponibilidad (AZ) que son centros de datos separados físicamente con una latencia muy baja entre
+ellos.
+
+**Red**
+
+¿Qué red debemos usar?. Podemos elegir entre kubenet, CNI, clásica y redes externas.
+
+La red clásica nativa de Kubernetes está “obsoleta” siendo esto un punto a favor de kubenet, por lo que
+podemos descartarla directamente.
+
+Las redes externas se usa en algunas implementaciones personalizadas y solo para casos particulares.
+
+Quedando así las opciones de kubenet y CNI.
+
+Container Network Interface (CNI) nos permite conectar un controlador de red de terceros. Kops admite
+redes como Calico, flannel, Canal (Flannel + Calico), kopeio-vxlan, kube-router, romana, weave,
+amazon-vpc-routed-eni. Cada una de esas redes tiene pros y contras y difiere en su implementación y
+objetivos principales. Elegir entre ellos requeriría de un análisis detallado de cada uno. Así que vamos a
+enfocarnos en kubenet.
+
+Kubenet es la solución de red predeterminada de kops. Es una red nativa de Kubernetes, y se considera
+una solución fiable y estable. Sin embargo, viene con una limitación. En AWS, las rutas para cada nodo
+se configuran en tablas de enrutamiento de AWS VPC. Como esas tablas no pueden tener más de
+cincuenta entradas, kubenet se puede usar en clústeres con hasta cincuenta nodos. Si se planea tener
+un clúster más grande que esto, habrá que cambiar a uno de los CNI mencionados anteriormente.
+
+Lo bueno en definitiva es que utilizar cualquiera de las soluciones de red es fácil. Y lo único que hay que
+hacer es especificar el argumento --networking seguido del nombre de la red.
+
+Para decidir cual es el mejor habría que hacer como hemos dicho antes un estudio más amplio, así que
+para el cluster que se va a crear, vamos a utilizar la solución de kops predetermina kubenet.
+
+**Tamaño de los nodos del cluster**
+
+El último aspecto a tener en cuenta, es elegir el tamaño que necesitamos para nuestros nodos. En este
+caso si no ejecutamos muchas aplicaciones, nos valdría con utilizar las t2.small y así mantenemos los
+gastos mínimo en relación calidad/precio. Las t2.micro son demasiado pequeñas para manejar toda la
+
+información, así que el siguiente tipo de instancia EC2 más pequeñas entre las disponibles de AWS, son
+las t2.small.
+
+<div id='id35' />
+
+#### **3.5. COMPONENTES PRINCIPALES DEL CLÚSTER**
+
+Cuando kops ha creado las máquinas virtuales (EC2), lo primero que ejecutó fue `nodeup`. Esto lo que
+hizó fue instalar unos pocos de paquetes, asegurando que los servicios de `Docker, Kubelet y Protokube`
+estuvieran levantados y corriendo dentro de cada uno de los nodos.
+
+`Docker` como ya sabemos es el servicio que se encarga de correr los contenedores dentro de los nodos.
+
+`Kubelet` es el agente que va instalado en cada uno de los nodos, donde su tarea principal es ejecutar
+Pods. O para ser más concretos, garantizar que los contenedores descritos en PodSpecs se estén
+ejecutando mientras estén “sanos”. Principalmente la información sobre los pods la obtiene de la API
+del servidor de Kubernetes o como alternativa puede obtener también la información a través de
+ficheros o endpoints HTTP.
+
+`Protokube` a diferencia de Docker y Kubelet, es específico para kops. Sus principales responsabilidades
+son: descubrir los discos maestros, montarlos y crear manifests. Algunos de esos manifests son utilizados
+por Kubelet para crear Pods a nivel de sistema y para asegurar que estén siempre corriendo.
+Además, cuando los contenedores que son definidos a través de Pods vía manifest (creado por
+Protokube) son arrancados, Kubelet también intenta contactar con la API del servidor que, finalmente,
+también es iniciada por él, una vez la conexión es establecida, Kubelet registra el nodo donde este se
+encuentre corriendo.
+
+Estos tres paquetes estan corriendo en todos los nodos, sin importar que sean masters o workers.
+
+![Figura 7]()
+
+Si echamos un vistazo los Pods que están corriendo a nivel de sistema en nuestro cluster:
+
+```
+kubectl --namespace kube-system get pods
+```
+
+Salida:
+
+```
+NAME READY STATUS RESTARTS AGE
+dns-controller-6b689bc66f-4676b 1/1 Running 0 28m
+etcd-server-events-ip-172-20-102-8.eu-west-1.compute.internal 1/1 Running 0 27m
+etcd-server-events-ip-172-20-53-254.eu-west-1.compute.internal 1/1 Running 0 27m
+etcd-server-events-ip-172-20-72-59.eu-west-1.compute.internal 1/1 Running 0 27m
+etcd-server-ip-172-20-102-8.eu-west-1.compute.internal 1/1 Running 0 27m
+etcd-server-ip-172-20-53-254.eu-west-1.compute.internal 1/1 Running 0 27m
+etcd-server-ip-172-20-72-59.eu-west-1.compute.internal 1/1 Running 0 27m
+kube-apiserver-ip-172-20-102-8.eu-west-1.compute.internal 1/1 Running 0 27m
+kube-apiserver-ip-172-20-53-254.eu-west-1.compute.internal 1/1 Running 0 27m
+kube-apiserver-ip-172-20-72-59.eu-west-1.compute.internal 1/1 Running 0 27m
+kube-controller-manager-ip-172-20-102-8.eu-west-1.compute.internal 1/1 Running 0 28m
+kube-controller-manager-ip-172-20-53-254.eu-west-1.compute.internal 1/1 Running 0 27m
+kube-controller-manager-ip-172-20-72-59.eu-west-1.compute.internal 1/1 Running 0 27m
+
+kube-dns-6c4cb66dfb-7nqk9 3/3 Running 0 26m
+kube-dns-6c4cb66dfb-hjs88 3/3 Running 0 28m
+kube-dns-autoscaler-f4c47db64-qlfnp 1/1 Running 0 28m
+kube-proxy-ip-172-20-102-8.eu-west-1.compute.internal 1/1 Running 0 27m
+kube-proxy-ip-172-20-106-152.eu-west-1.compute.internal 1/1 Running 0 26m
+kube-proxy-ip-172-20-53-254.eu-west-1.compute.internal 1/1 Running 0 27m
+kube-proxy-ip-172-20-72-59.eu-west-1.compute.internal 1/1 Running 0 27m
+kube-scheduler-ip-172-20-102-8.eu-west-1.compute.internal 1/1 Running 0 27m
+kube-scheduler-ip-172-20-53-254.eu-west-1.compute.internal 1/1 Running 0 27m
+kube-scheduler-ip-172-20-72-59.eu-west-1.compute.internal 1/1 Running 0 27m
+```
+
+Si echamos un vistazo, hay varios componentes del core que están corriendo.
+
+Podemos divir los componentes del core en dos grupos, los componentes `master` que solo corren en los nodos `masters` que serían:
+
+* kube-apiserver
+* kube-controller-manager
+* kube-scheduler
+* etcd
+* dns-controller
+
+Por otro lado, los componentes del nodo se ejecutan en todos los nodos, tanto en masters como en
+workers. Además de Docker, Kubelet y Protokube como citamos anteriormente, tenemos al componente
+“kube-proxy”. A continuación se explican brevemente los nuevos componentes nombrados:
+
+`Kubernetes API Server (kube-apiserver)` es el encargado de aceptar las solicitudes para
+crear,actualizar o eliminar recursos de Kubernetes. Este componente escucha en los puertos tcp `8080` y
+`443`. Al primer puerto se accede de forma insegura, ya que se accede a él a través del propio servidor. A
+través de él, el resto de componentes pueden registrarse ellos mismos sin requerir un token. El puerto
+443 se utiliza para todas las comunicaciones externas con la API del servidor, como por ejemplo, cuando
+ejecutamos como usuario un comando kubectl. Incluso el propio componente Kubelet utiliza este puerto
+para llegar a la API del servidor y registrarse así como un nodo.
+
+No importa quien inicie realmente la comunicación con la API del servidor, su propósito es validar y
+configurar el objeto de la API. Que entre otros, pueden ser Pods, Services, ReplicaSets u otros. El uso de
+esta API no se limita a las interacciones con el usuario. Todos los componentes del cluster interactúan
+con la API del servidor para operaciones que requieran un “estado compartido” en todo el cluster.
+
+El estado compartido y todos los datos del clúster son almacenados en [etcd](https://github.com/coreos/etcd). El almacenamiento de los datos se guardan en el formato clave/valor, y se encuentran altamente disponibles a través de la replicación de datos consistente. Esto se divide dentro de dos Pods, donde etcd-server mantiene el
+estado del cluster y etcd-server-events almacena los eventos que ocurren dentro de él.
+
+> **Nota:** Kops crea volumenes EBS para cada instancia de **etcd**, esto sirve como su almacenamiento.
+
+**Kubernetes Controller Manager (kube-controller-manager)**
+
+Es el encargado de ejecutar los controladores, como:
+    * ReplicaSets
+    * Deployments
+
+Además de los controladores de objetos como estos anteriores, kube-controller-manager debe controlar
+los controladores del nodo responsables de monitorizar los servidores y responder cuando uno deja de
+estar disponible.
+
+**Kubernetes Scheduler (kube-scheduler)**
+
+Mira la api del servidor para nuevos Pods y los asigna a un nodo en concreto. A partir de ahí, esos Pods
+son ya gestionados por el kubelet de dicho nodo asignado.
+
+**DNS Controller (dns-controller)
+
+Refleja los servicios definidos a través de la API del servidor. Está a cargo del reenvio de trafíco a través
+del protocolo TCP y UDP. Este componente corre en todos los nodos del cluster, tanto masters como
+workers.
+
+![Figura 14-3]()
+
+Hay muchas cosas más en nuestro cluster realmente. Pero por ahora creo que está bastante bien haber
+explorado los componentes principales. El siguiente paso será actualizar el cluster.
+
+<div id='id36' />
+
+### **3.6. ACTUALIZANDO INSTANCESGROUPS**
+
