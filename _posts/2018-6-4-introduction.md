@@ -251,4 +251,51 @@ aws ec2 modify-subnet-attribute \
 --subnet-id "subnet-2364e76b" --map-public-ip-on-launch
 ```
 
+Por defecto las **subnets** comparten una misma tabla de enrutamiento de manera predeterminada, que se crea automáticamente con la VPC por defecto. Pero es posible crear una **tabla de enrutamiento** para una subnet especifica.
+
+### **Tablas de Enrutamiento - Routing Table**
+
+Las tablas se utilizan para enrutar el tráfico dentro de las VPC’s, por defecto se crea una de manera predeterminada, es posible crear varias **tablas de enrutamiento** y asociarlas de manera independiente a algunas subnets y a otras no.
+
+A mi parecer es super importante etiquetar bien los componentes en AWS, ya que de lo contrario, nos podemos volver locos en el momento que la infraestructura escala y tenemos varios elementos de cada servicio.
+
+Por ejemplo si queremos sacar alguna información de una subnet, podemos filtrar por el nombre que le hayamos puesto en su creación de la siguiente manera:
+
+```
+aws ec2 describe-subnets --filters Name=tag:nombre-subnet
+```
+Salida, consultando la subnet **public1**:
+```
+{
+    "Subnets": [
+        {
+            "AvailabilityZone": "eu-west-1a", 
+            "Tags": [
+                {
+                    "Value": "public1", 
+                    "Key": "Name"
+                }
+            ], 
+            "AvailableIpAddressCount": 251, 
+            "DefaultForAz": false, 
+            "Ipv6CidrBlockAssociationSet": [], 
+            "VpcId": "vpc-fd6f139b", 
+            "State": "available", 
+            "MapPublicIpOnLaunch": true, 
+            "SubnetId": "subnet-88c87aee", 
+            "CidrBlock": "10.0.1.0/24", 
+            "AssignIpv6AddressOnCreation": false
+        }
+    ]
+}
+```
+Posteriormente creamos una **tabla de enrutamiento** asociada a nuestra vpc:
+aws ec2 create-route table --vpc-id
+```
+
+Crear una tabla de rutas llammada "route-public" asociada a nuestra vpc y posteriormente asociar a las subnets publicas.
+
+Crear una tabla de rutas llamada "route-private" asociada a nuestra vpc y posteriormente asociar a las subnets privadas.
+
+
 ## **CONTINUARÁ**
