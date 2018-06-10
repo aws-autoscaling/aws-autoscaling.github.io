@@ -764,8 +764,7 @@ workers. Además de Docker, Kubelet y Protokube como citamos anteriormente, tene
 **Kubernetes API Server (kube-apiserver)**
 
 Es el encargado de aceptar las solicitudes para
-crear,actualizar o eliminar recursos de Kubernetes. Este componente escucha en los puertos tcp 8080 y
-443. Al primer puerto se accede de forma insegura, ya que se accede a él a través del propio servidor. A
+crear,actualizar o eliminar recursos de Kubernetes. Este componente escucha en los puertos tcp 8080 y 443. Al primer puerto se accede de forma insegura, ya que se accede a él a través del propio servidor. A
 través de él, el resto de componentes pueden registrarse ellos mismos sin requerir un token. El puerto
 443 se utiliza para todas las comunicaciones externas con la API del servidor, como por ejemplo, cuando
 ejecutamos como usuario un comando kubectl. Incluso el propio componente Kubelet utiliza este puerto
@@ -817,6 +816,33 @@ workers.
 Lo siguiente que vamos a ver, será actualizar nuestro clúster.
 
 ## **Actualizando el Instance Group**
+
+Por mucho que planteemos y analicemos e intentemos precedir un estado perfecto para nuestro cluster,
+puede ser que la configuración que hayamos hecho sea ideal para un momento determinado, pero no
+nos sirva para el dia de mañana. Las cosas van cambiando y necesitamos adaptarnos al cambio. Es por
+eso que nuestro cluster debería ser capaz de aumentar y disminuir su capacidad de forma automática
+mediante la evaluación de métricas o algún tipo de alerta que interactue o bien directamente con kops
+o con la api de AWS.
+
+Aún así de momento vamos a limitarnos a actualizar nuestro clúster de forma manual.
+
+Con Kops, no podemos actulizar el cluster directamente. En su lugar, editamos el estado deseado del
+cluster que se encuentra almacenado en el S3 Bucket. Una vez se cambie el estado, kops hará los
+cambios necesarios para cumplir con el nuevo estado deseado.
+Así que para ver un ejemplo, vamos a actualizar nuestro cluster, para que la cantidad de nodos workers aumente de uno a dos. Vamos a agregar una instancia más al Clúster.
+
+Así como primera toma, vamos a ver los sub commandos que nos proporciona la ayuda de **kops edit**:
+
+```
+kops edit --help
+
+Available Commands:
+  cluster       Edit cluster.
+  instancegroup Edit instancegroup.
+```
+
+Tenemos dos tipos de ediciones disponibles.
+
 
 ## **Actualizando la versión de Kubernetes**
     
