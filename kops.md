@@ -1247,13 +1247,185 @@ En el siguiente apartado vamos a desplegar una aplicación de demo y en donde ne
 
 ## **Desplegando una app de prueba**
 
+A la hora de desplegar nuestra aplicación en nuestro Cluster Kubernetes en AWS es igual que a la hora de desplegarlo por ejemplo en **Minikube**. Ya que podemos desplegar nuestra definición en un YAML y llevarlo a cualquier proveedor.
+
+Así que no voy a entrar en detalle en como crear desde cero una definición y vamos a utilizar una de demo:
+
+```
+➜  kubectl create -f go-demo-2.yml \
+    --record --save-config
+
+ingress.extensions "go-demo-2" created
+deployment.apps "go-demo-2-db" created
+service "go-demo-2-db" created
+deployment.apps "go-demo-2-api" created
+service "go-demo-2-api" created
+```
+
+Podemos comprobar con la siguiente instrucción si se ha completado el deployment:
+
+```
+➜  kubectl rollout status deployment go-demo-2-api
+deployment "go-demo-2-api" successfully rolled out
+```
+
+Una vez muestre la salida anterior, ya podriamos comprobar que funciona nuestra aplicación, en este caso para comprobar este deployment, me valdría con hacer:
+
+```
+➜  curl -i "http://$CLUSTER_DNS/demo/hello"
+HTTP/1.1 200 OK
+Server: nginx/1.13.9
+Date: Sun, 10 Jun 2018 22:45:21 GMT
+Content-Type: text/plain; charset=utf-8
+Content-Length: 14
+Connection: keep-alive
+
+hello, world!
+```
+
+Si recibimos el código de respuesta 200 y el mensaje de **hello, world!** quiere decir que nuestro Clúster de Kubernetes en AWS funciona.
+
+Cuando se envia una solicitud al ELB dedicado a los **nodos workers**, este utiliza el algoritmo **round-robin** para redireccionar la petición http a uno de los nodos saludables. Una vez ha llegado la petición dentro del nodo, es seleccionada por el servicio de nginx, reenviandose a Ingress y desde ahí se deriva a uno de los contenedores que forman la replica del ReplicaSet.
+
+Podemos ver esto mismo en la figura siguiente:
+
+<p align="center">
+    <img src="/images/Figura20.png" alt="Balanceador de carga dedicado a los nodos workers">
+</p>
+<p align="center">
+    <b>Figura 20 - Balanceador de carga dedicado a los nodos workers</b>
+</p>
+
+Señalar que los contenedores que forman la aplicación siempre se ejecutan en los nodos workers. Los nodos masters, por otro lado, están dedicado exclusivamente a ejecutar el sistema de Kubernetes. Esto significa que no se pueden combinar los servidores para desplegar los contenedores de una misma aplicación como por ejemplo se puede realizar con **Minikube**.
+
+Es mejor y más fiable que los masters solamente se dediquen a su tarea y no también de los despliegues de aplicaciones. Esto Kops lo sabe y no nos permite mezclar ambos tipos de nodos a la hora de desplegar una app.
 
 
 ## **Alta Disponibilidad y Tolerancia a fallos**
 
-## **Permitiendo acceso al Clúster**
+Un clúster no sería fiable si no fuera tolerante a fallos. Kops se encarga de esto, pero aún así vamos a validar que ocurre.
+
+Vamos a almacenar un listado de las instancias que se encuentran en el ASG de los workers:
+
+```
+➜  aws ec2 \ 
+describe-instances | jq -r \
+".Reservations[].Instances[] \
+| select(.SecurityGroups[]\
+.GroupName==\"nodes.$NAME\")\
+.InstanceId"
+
+i-09199069f483e29db
+i-01ded2bcce0dbf335
+```
+
+Vamos a almacenar el id de una de las instancias en una variable llamada **INSTANCE_ID** y vamos a terminarla, ejecutando el comando **tail -n 1** vamos a seleccionar solamente una como hemos comentado.
+
+```
+INSTANCE_ID=$(aws ec2 \
+describe-instances | jq -r \
+".Reservations[].Instances[] \
+| select(.SecurityGroups[]\
+.GroupName==\"nodes.$NAME\")\
+.InstanceId" | tail -n 1)
+```
+
+Y ahora procedemos a terminar con dicha instancia:
+
+```
+➜  aws ec2 terminate-instances \
+    --instance-ids $INSTANCE_ID
+{
+    "TerminatingInstances": [
+        {
+            "InstanceId": "i-01ded2bcce0dbf335", 
+            "CurrentState": {
+                "Code": 32, 
+                "Name": "shutting-down"
+            }, 
+            "PreviousState": {
+                "Code": 16, 
+                "Name": "running"
+            }
+        }
+    ]
+}
+```
+
+Ahora podemos listar las instancias que esten corriendo en el security group de nuestro ASG workers:
+
+```
+aws ec2 describe-instances | jq -r \
+".Reservations[].Instances[] \
+| select(\
+.SecurityGroups[].GroupName \
+==\"nodes.$NAME\").InstanceId"
+
+i-09199069f483e29db
+```
+
+Y verificar que efectivamente solamente esta corriendo una instancia.
+
+Esto en teoria el Auto Scaling Group, detectará que el estado deseado no es de la cantidad correcta. Y ejecutará aproximadamente dentro de 1 minuto una nueva instancia en dicho ASG.
+
+Si ejecutamos el siguiente comando veremos como se acaba de levantar la nueva instancia:
+
+```
+➜  cluster kubectl get nodes
+NAME                                           STATUS     ROLES     AGE       VERSION
+ip-172-20-102-77.eu-west-1.compute.internal    Ready      master    2h        v1.8.5
+ip-172-20-107-252.eu-west-1.compute.internal   Ready      node      2h        v1.8.5
+ip-172-20-45-89.eu-west-1.compute.internal     Ready      master    2h        v1.8.5
+ip-172-20-75-70.eu-west-1.compute.internal     NotReady   node      9s        v1.8.5
+ip-172-20-88-88.eu-west-1.compute.internal     Ready      master    2h        v1.8.5
+```
+
 
 ## **Borrar el Clúster**
+
+Si por el motivo que sea el Clúster ya no nos sirve o no se esta utilizando lo ideal es borrarlo, ya que por desgracia no es gratuito tener corriendo Kubernetes en un proveedor de nube pública como AWS.
+
+Así que vamos primeramente a guardar los valores que tenemos en las variables de entorno, por si queremos volver a recrear el clúster podamos hacerlo mucho más rapido:
+
+```
+echo "export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
+export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
+export AWS_DEFAULT_REGION=$AWS_DEFAULT_REGION
+export ZONES=$ZONES
+export NAME=$NAME
+export BUCKET_NAME=$BUCKET_NAME
+export KOPS_STATE_STORE=$KOPS_STATE_STORE
+export CLUSTER_DNS=$CLUSTER_DNS" \
+>kops-envs
+```
+<div class="callout callout--info">
+<p>O si hemos cambiado el estado deseado de los ASG a 0 todos y no hemos almacenado las variables de entorno en nuestro perfil de usuario. Y vamos a volver a tocar nuestro Clúster de Kubernetes y no queremos que se nos este cobrando sin utilizarlo.</p>
+</div>
+
+Para borrar el clúster simplemente ejecutariamos:
+
+```
+➜  kops delete cluster \
+    --name $NAME \
+    --yes
+```
+Por otro lado necesitariamos eliminar el S3 Bucket donde hemos almacenado siempre el estado deseado del Clúster:
+
+```
+➜  aws s3api delete-bucket \
+    --bucket $BUCKET_NAME
+```
+<div class="callout callout--info">
+<p><strong>No es necesario</strong>Eliminar los recursos de IAM que se crearon al principio del todo, ya que estos no tienen un coste por no usarse.O dicho de otra forma, un costo por horas.</p>
+</div>
+
+
+
+
+
+
+
+
 
 ## **Volumenes Persistentes**
 
