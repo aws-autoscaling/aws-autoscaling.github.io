@@ -39,8 +39,6 @@ Partiendo como base con AWS, posteriormente necesitamos otra solución para tene
 * **Máquinas Virtuales:** es la forma tradicional y donde AWS nos ofrece su propio servicio denominado EC2, donde las usaremos junto con algo que se hace llamar `Auto Scaling Groups`.
 * **Contenedores:** esto que se está poniendo tan de moda ahora y escuchamos en todos lados, para los usuarios que se hayan decantado o quieran pasar su aplicación a contenedores, también veremos unos ejemplos prácticos con:
     * **Kops:** para crear y administrar tu propio clúster `Kubernetes` sobre AWS, y pudiendo así auto-escalar tu aplicación con contenedores.
-    * **EKS:** Proximamente.
 
 Así que, para poder entender mejor las diferentes soluciones, me parece más que interesante empezar por una introducción con los principales componentes de AWS, desde la línea de comandos a través de la AWS CLI.
 Posteriormente desplegar un Clúster de Kubernetes sobre AWS, gracias a la herramienta Kops. Donde también vamos a auto escalar a nivel de infraestructura (nodos).
-Y por último el otro extremo sería utilizando AWS Fargate, desplegar un chat en tiempo real con socket.io y un redis sobre contenedores. Auto escalando estos en horizontal.
