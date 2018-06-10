@@ -841,17 +841,413 @@ Available Commands:
   instancegroup Edit instancegroup.
 ```
 
-Tenemos dos tipos de ediciones disponibles.
+Tenemos dos tipos de ediciones disponibles. En este caso vamos a elegir la última opción ya que si ejecutamos la siguiente instrucción que seria la primera opción:
+
+```
+kops edit cluster --name $NAME
+```
+
+No veremos nada relacionado con el número de nodos que tenemos, esto se debe a que no deberíamos crear servidores en AWS directamente. Ya que Kubernetes tiene un enfoque declarativo antes que imperativo cuando a instancias EC2 se refiere.
+
+Así que vamos a utilizar la segunda opción, en lugar de enviar una instrucción imperativa para crear un nuevo nodo, vamos a cambiar el valor del ASG relacionado con los nodos **workers**. Una vez cambiemos los valores, AWS se asegurará de que se cumpla el nuevo estado deseado. Además de crear el nuevo servidor se encargará de monitorizar que el ASG cumple con el número de nodos deseados y de mantenerlos si hubiera cualquier fallo.
+
+```
+kops edit ig --name $NAME nodes
+```
+
+Y cambiar con el editor **vi**, los valores **maxSize** y **minSize** por el valor 2:
+
+```
+...
+ image: kope.io/k8s-1.8-debian-jessie-amd64-hvm-ebs-2018-02-08
+  machineType: t2.small
+  maxSize: 2
+  minSize: 2
+  nodeLabels:
+    kops.k8s.io/instancegroup: nodes
+  role: Node
+  subnets:
+  - eu-west-1a
+  - eu-west-1b
+  - eu-west-1c
+...
+```
+Aparte hay otra información útil en dicho fichero de configuración temporal, y es que podemos ver que nuestros nodos del clúster por lo menos los workers utilizan como sistema operativo base **Debian** y que se encuentran replicados por las 3 zonas de disponibilidad que existen en la región.
+
+<p align="center">
+    <img src="/images/Figura16.png" alt="El proceso que ocurre cuando hacemos un kops edit">
+</p>
+<p align="center">
+    <b>Figura 16 - El proceso que ocurre cuando hacemos un kops edit</b>
+</p>
+
+Una vez hemos cambiado la configuración, vamos a decirle a **kops** que queremos actualizar el Clúster para obtener el nuevo estado deseado.
+
+```
+# kops update cluster --name $NAME --yes
+
+I0610 21:48:10.702009   32323 update_cluster.go:291] Exporting kubecfg for cluster
+kops has set your kubectl context to proyecto.k8s.local
+
+Cluster changes have been applied to the cloud.
+
+
+Changes may require instances to restart: kops rolling-update cluster
+```
+
+Como podemos ver en la salida, se han aplicado los cambios a la nube. Pero el último aviso que nos muestra la salida es muy interesante. Ya que esa opción nos permitiría aplicar el nuevo estado deseado sin realizar un **downtime** en nuestro Clúster, esto se aplicaría a un solo servidor para que el resto sigan estando en ejecución y paralelamente Kubernetes reubicaría los Pods que se estuvieran ejecutando en los nodos que se hayan apagado.
+
+De lo contrario un **kops update** fuerza directamente al estado deseado a todos los nodos y esto podría provocar un **tiempo de inactividad** en nuestro clúster.
+
+A continuación vamos a ver los pasos que ha realizado kops, al ejecutar el comando **kops update**:
+
+1. **Kops** obtiene el nuevo estado deseado almacenado en el **S3 Bucket**
+2. **Kops** envia una petición a la API de AWS para que cambie el valor en la configuración del ASG de los workers.
+3. **AWS** modifica dichos valores, incrementandolos a uno.
+4. El ASG crea una nueva instancia EC2 para cumplir con el nuevo tamaño especificado.
+5. El componente **Protokube** instala tanto el servicio **Kubelet** como **Docker** en el nodo y crea el archivo de manifiesto con el listado de los Pods.
+6. **Kubelet** lee el archivo de manifiesto y ejecuta el contenedor donde se levanta el Pod de **kube-proxy**.
+7. **Kubelet** envia una petición al **kube-apiserver** (a través del dns-controller) y registra el nuevo nodo y acaba uniendolo al Clúster. Por último la información sobre el nuevo nodo se almacena en **etcd**.
+
+<p align="center">
+    <img src="/images/Figura17.png" alt="Proceso a la ejecución del comando kops update">
+</p>
+<p align="center">
+    <b>Figura 17 - Proceso a la ejecución del comando kops update</b>
+</p>
+
+Para verificar que esto se ha realizado, lanzar un ```kops validate cluster``` y visualizar el nuevo valor de **min** y **max** para el ASG de los workers:
+
+```
+INSTANCE GROUPS
+NAME			ROLE	MACHINETYPE	MIN	MAX	SUBNETS
+nodes			Node	t2.small	2	2	eu-west-1a,eu-west-1b,eu-west-1c
+```
+
+También podemos visualizar que efectivamente agregó el nuevo nodo al cluster:
+
+```
+➜  cluster kubectl get nodes
+NAME                                          STATUS    ROLES     AGE       VERSION
+ip-172-20-107-95.eu-west-1.compute.internal   Ready     master    2h        v1.8.4
+ip-172-20-41-196.eu-west-1.compute.internal   Ready     node      2h        v1.8.4
+ip-172-20-51-240.eu-west-1.compute.internal   Ready     master    2h        v1.8.4
+ip-172-20-86-119.eu-west-1.compute.internal   Ready     node      20m       v1.8.4
+ip-172-20-91-5.eu-west-1.compute.internal     Ready     master    2h        v1.8.4
+```
+
+De esta manera podemos agregar o eliminar nodos facilmente y ¿si queremos actualizar las versiones de Kubernetes en los nodos?..
 
 
 ## **Actualizando la versión de Kubernetes**
-    
+
 ### **Manual**
-### **Automática**
+
+El proceso para actualizar el clúster dependerá de lo que queramos hacer, pero si queremos cambiar la versión de Kubernetes, el proceso a ejecutar es similar al realizado para añadir un nuevo nodo worker.
+
+Ahora vamos a editar la definición del cluster:
+
+```
+kops edit cluster $NAME
+```
+Procedemos a cambiar el valor ```v1.8.4``` a ```1.8.5```, guardar y salir.
+
+Una vez modificado el valor, ejecutamos la instrucción para actualizar:
+
+```
+kops update cluster $NAME
+```
+
+En este caso la última linea de la salida nos dira que debemos ejecutar el comando **update** con el parametro **--yes**, aún así tambien nos ha mostrado en la salida los cambios que se realizarán en el Clúster.
+
+Esto me parece necesario, ya que no es lo mismo agregar un nuevo nodo, que en teoria no afecta al resto del clúster. A actualizar el versionado de Kubernetes en los nodos, que nos puede fastidiar y dejarnos realmente en un estado no deseado.
+
+Si, nos atrevemos a actualizar, ejecutar el comando anterior con la opción de proceder a ello, ```kops update cluster $NAME --yes```.
+
+Ahora nos volverá a pedir que ejecutemos de manera extra, la instrucción **kops rolling-update cluster $NAME** ya que como hemos comentado en el apartado anterior, no deseamos que nuestro clúster se caiga al cambiar de manera simultanea todos los nodos, si no, que vaya realizandose poco a poco.
+
+```
+➜  cluster kops rolling-update cluster $NAME
+NAME			STATUS		NEEDUPDATE	READY	MIN	MAX	NODES
+master-eu-west-1a	NeedsUpdate	1		0	1	1	1
+master-eu-west-1b	NeedsUpdate	1		0	1	1	1
+master-eu-west-1c	NeedsUpdate	1		0	1	1	1
+nodes			    NeedsUpdate	2		0	2	2	2
+
+Must specify --yes to rolling-update.
+```
+
+En la última salida podemos apreciar que necesitamos actualizar cada uno de los ASG, asi que procedemos a ejecutar la instrucción con el ```--yes```. Si razonamos lo hablado, entenderemos que este proceso debe demorarse unos minutos interesantes.. exactamente con las 5 instancias .. alrededor de **31 minutos**
+
+Aquí os dejo parte de la salida donde podemos visualizar lo que esta ocurriendo en nuestro Clúster:
+```
+I0610 22:26:50.143202     931 instancegroups.go:157] Draining the node: "ip-172-20-91-5.eu-west-1.compute.internal".
+node "ip-172-20-91-5.eu-west-1.compute.internal" cordoned
+node "ip-172-20-91-5.eu-west-1.compute.internal" cordoned
+WARNING: Deleting pods not managed by ReplicationController, ReplicaSet, Job, DaemonSet or StatefulSet: etcd-server-events-ip-172-20-91-5.eu-west-1.compute.internal, etcd-server-ip-172-20-91-5.eu-west-1.compute.internal, kube-apiserver-ip-172-20-91-5.eu-west-1.compute.internal, kube-controller-manager-ip-172-20-91-5.eu-west-1.compute.internal, kube-proxy-ip-172-20-91-5.eu-west-1.compute.internal, kube-scheduler-ip-172-20-91-5.eu-west-1.compute.internal
+node "ip-172-20-91-5.eu-west-1.compute.internal" drained
+I0610 22:28:21.731177     931 instancegroups.go:273] Stopping instance "i-0d74adcdc394f4849", node "ip-172-20-91-5.eu-west-1.compute.internal", in group "master-eu-west-1b.masters.proyecto.k8s.local".
+....
+....
+node "ip-172-20-41-196.eu-west-1.compute.internal" drained
+I0610 22:53:44.572868     931 instancegroups.go:273] Stopping instance "i-08a929acb9332287c", node "ip-172-20-41-196.eu-west-1.compute.internal", in group "nodes.proyecto.k8s.local".
+I0610 22:57:46.056320     931 instancegroups.go:188] Validating the cluster.
+I0610 22:57:48.909364     931 instancegroups.go:249] Cluster validated.
+I0610 22:57:48.909415     931 rollingupdate.go:193] Rolling update completed for cluster "proyecto.k8s.local"!
+```
+
+En la siguiente figura podemos ver más claramente los pasos que se han ido procesando para cada instancia levantada (en este caso sobre una master):
+
+<p align="center">
+    <img src="/images/Figura18.png" alt="Rolling upgrade de un nodo master">
+</p>
+<p align="center">
+    <b>Figura 18 - Rolling upgrade de un nodo master</b>
+</p>
+
+Tan pronto como se valide que se ha actualizado el primer nodo master, se pasará al siguiente. Esto se demorará entre 10 y 15 minutos el que se vuelva a repetir el mismo proceso con los otros **dos masters**. Cuando los tres masters se encuentren actualizados. Kops ejecutará el mismo proceso con los dos nodos **workers** y habrá que esperar aproximadamente otros 10-15 minutos, siendo así el total que se ha demorado el proceso entero de las 5 instancias.
+
+La experiencia al final es positiva, pero se demora demasiado tiempo. También es cierto que esto se debe a que el **Auto Scaling Group** se toma un 1 minuto o 2 en comprobar que una máquina se encuentra caída y necesita ser reemplazada. Si a esto le añadimos el tiempo para crear e iniciar Docker, Kubelet.. etc y que los contenedores que forman los "pods principales" necesitan ser **arrancados**, pues ya tenemos el motivo del tiempo necesario...
+
+Volviendo al tema del versionado de nuestros nodos, si comprobamos ahora deberiamos ver que tienen la nueva versión:
+
+```
+➜  kubectl get nodes
+NAME                                           STATUS    ROLES     AGE       VERSION
+ip-172-20-102-77.eu-west-1.compute.internal    Ready     master    1h        v1.8.5
+ip-172-20-107-252.eu-west-1.compute.internal   Ready     node      48m       v1.8.5
+ip-172-20-45-89.eu-west-1.compute.internal     Ready     master    54m       v1.8.5
+ip-172-20-68-35.eu-west-1.compute.internal     Ready     node      42m       v1.8.5
+ip-172-20-88-88.eu-west-1.compute.internal     Ready     master    1h        v1.8.5
+```
+
+### **Automáticamente**
+
+Lo ideal seria ir actualizando a la última versión estable nuestro clúster. Para estos casos podemos ejecutar el comando ```kops upgrade cluster```.
+
+Pero si es verdad que antes tuvimos que editar nosotros manualmente el estado deseado antes de lanzar el proceso ```rolling update```.
+
+Así que también tenemos la siguiente instrucción para cambiar a la última versión estable y soportada:
+
+```
+➜  cluster kops upgrade cluster $NAME --yes
+ITEM				PROPERTY		OLD							NEW
+Cluster				KubernetesVersion	v1.8.5							1.9.6
+InstanceGroup/master-eu-west-1a	Image			kope.io/k8s-1.8-debian-jessie-amd64-hvm-ebs-2018-02-08	kope.io/k8s-1.9-debian-jessie-amd64-hvm-ebs-2018-03-11
+InstanceGroup/master-eu-west-1b	Image			kope.io/k8s-1.8-debian-jessie-amd64-hvm-ebs-2018-02-08	kope.io/k8s-1.9-debian-jessie-amd64-hvm-ebs-2018-03-11
+InstanceGroup/master-eu-west-1c	Image			kope.io/k8s-1.8-debian-jessie-amd64-hvm-ebs-2018-02-08	kope.io/k8s-1.9-debian-jessie-amd64-hvm-ebs-2018-03-11
+InstanceGroup/nodes		Image			kope.io/k8s-1.8-debian-jessie-amd64-hvm-ebs-2018-02-08	kope.io/k8s-1.9-debian-jessie-amd64-hvm-ebs-2018-03-11
+
+Updates applied to configuration.
+You can now apply these changes, using `kops update cluster proyecto.k8s.local`
+```
+
+A continuación deberiamos lanzar las instrucciones que ya conocemos, cuando hemos actualizado el versionado de manera manual:
+
+```
+➜  kops update cluster $NAME --yes
+➜  kops rolling-update cluster $NAME --yes
+```
+
+El camino para automatizar esto ahora mismo, seria ejecutar algun script o job en un sistema de integracción continua y programarlo cada X tiempo, y aprovechar que con una isntrucción automáticamente detecta si existe una nueva versión de Kubernetes estable. Si además agregamos que se levante un entorno de kubernetes de testing, probemos nuestra aplicación o funcionalidad dentro de ella y si funciona, entonces proceder a la actualización del Clúster.. pues mejor mejor ;).
+
+Va siendo hora de empezar a usar nuestro Clúster y conectarnos a él y desplegar alguna aplicación de prueba para verificar que el Clúster **funciona**.
 
 ## **Accediendo al Clúster**
 
+Hasta ahora hemos podido comprobar que podemos interactuar con el Clúster a través de la API utilizando **kubectl**. Esta comunicación se estable gracias al balanceador de carga (ELB):
+
+```
+➜  cluster aws elb describe-load-balancers
+{
+    "LoadBalancerDescriptions": [
+        {
+            ... 
+            "ListenerDescriptions": [
+                {
+                    "Listener": {
+                        "InstancePort": 443, 
+                        "LoadBalancerPort": 443, 
+                        "Protocol": "TCP", 
+                        "InstanceProtocol": "TCP"
+                    }, 
+                    ...
+                }
+            ], 
+            ...
+            "Instances": [
+                {
+                    "InstanceId": "i-0162da964c3af9661"
+                }, 
+                {
+                    "InstanceId": "i-07267e9e18710cd62"
+                }, 
+                {
+                    "InstanceId": "i-03e9e25ff27ca3130"
+                }
+            ], 
+            "DNSName": "api-proyecto-k8s-local-oiqnes-1891537701.eu-west-1.elb.amazonaws.com", 
+            ...
+            "LoadBalancerName": "api-proyecto-k8s-local-oiqnes", 
+            ...
+        }
+    ]
+}
+```
+
+Podemos ver en principio como el balanceador que redirecciona el tráfico hacia los masters, solament esta escuchando en el puerto 443, permitiendo solo las peticiones SSL. Y dicho **ELB** solamente está administrando solamente a esas 3 instancias, por lo que todavía nos falta la manera de acceder a las aplicaciones que levantemos en nuestros nodos **workers**.
+
+Desde el lado de vista del usuario, el valor que nos interesa es el del **DNSName** ya que es el que se usa para poder comunicarnos con la API del servidor de Kubernetes. La función del balanceador aquí es que realmente nuestra petición vaya a un master que se encuentre saludable y no perdamos las peticiones contra un master que este fuera de servicio por cualquier motivo.
+
+Finalmente el nombre del balanceador de carga es ```api-proyecto-k8s-local-oiqnes``` en mi caso. Es importante recordar como comienza el nombre, más abajo veremos el motivo.
+
+Podemos verificar que el **DNSName** es la puerta para acceder a la API, con la siguiente ejecución:
+
+```
+➜  cluster kubectl config view
+apiVersion: v1
+clusters:
+- cluster:
+    certificate-authority-data: REDACTED
+    server: https://api-proyecto-k8s-local-oiqnes-1891537701.eu-west-1.elb.amazonaws.com
+  name: proyecto.k8s.local
+...
+current-context: proyecto.k8s.local
+...
+```
+
+En la siguiente figura vemos donde se situa el balanceador de carga en nuestro Clúster:
+
+<p align="center">
+    <img src="/images/Figura19.png" alt="Balanceador de carga detrás del API Server de Kubernetes">
+</p>
+<p align="center">
+    <b>Figura 19 - Balanceador de carga detrás del API Server de Kubernetes</b>
+</p>
+
+Aunque podamos acceder a este DNS del balanceador de carga, no podemos acceder a nuestras aplicaciones que se encontrarian en los **workers** incluso si utilizaramos **Ingress** para canalizar las peticiones a los puertos **80** y **443**, no podriamos acceder a ellas. Necesitariamos otro balanceador de carga para los nodos del ASG de los workers.
+
+Afortunadamente, kops tiene la solución. Podemos utilizar **addons** para desplegar servicios **core** de manera adicional.
+
+Aquí podemos comprobar el listado de los addons disponibles: [Addons Kops](https://github.com/kubernetes/kops/tree/master/addons)
+
+Para nuestro caso viene genial y esto básicamente es un recurso de Kubernetes definido un fichero en formato **YAML**. Lo único que tenemos que hacer es indicarle la versión y ejecutar **kubectl** para crear el recurso:
+
+```
+➜  cluster kubectl create \
+-f https://raw.githubusercontent.com/kubernetes/kops/master/addons/ingress-nginx/v1.6.0.yaml
+
+namespace "kube-ingress" created
+serviceaccount "nginx-ingress-controller" created
+clusterrole.rbac.authorization.k8s.io "nginx-ingress-controller" created
+role.rbac.authorization.k8s.io "nginx-ingress-controller" created
+clusterrolebinding.rbac.authorization.k8s.io "nginx-ingress-controller" created
+rolebinding.rbac.authorization.k8s.io "nginx-ingress-controller" created
+service "nginx-default-backend" created
+deployment.extensions "nginx-default-backend" created
+configmap "ingress-nginx" created
+service "ingress-nginx" created
+deployment.extensions "ingress-nginx" created
+```
+
+Podemos comprobar que efectivamente se han creado ciertos recursos en el **namespace** kube-ingress:
+
+```
+➜  cluster kubectl --namespace kube-ingress \
+    get all
+NAME                                         READY     STATUS    RESTARTS   AGE
+pod/ingress-nginx-6fbb7d9c7-4q8kz            1/1       Running   0          1m
+pod/ingress-nginx-6fbb7d9c7-5gxrr            1/1       Running   0          1m
+pod/ingress-nginx-6fbb7d9c7-xgczw            1/1       Running   0          1m
+pod/nginx-default-backend-74f9cd546d-xdghs   1/1       Running   0          1m
+
+NAME                            TYPE           CLUSTER-IP       EXTERNAL-IP        PORT(S)                      AGE
+service/ingress-nginx           LoadBalancer   100.67.72.122    a55765edc6cfb...   80:32123/TCP,443:30278/TCP   1m
+service/nginx-default-backend   ClusterIP      100.65.182.220   <none>             80/TCP                       1m
+
+NAME                                          DESIRED   CURRENT   UP-TO-DATE   AVAILABLE   AGE
+deployment.extensions/ingress-nginx           3         3         3            3           1m
+deployment.extensions/nginx-default-backend   1         1         1            1           1m
+
+NAME                                                     DESIRED   CURRENT   READY     AGE
+replicaset.extensions/ingress-nginx-6fbb7d9c7            3         3         3         1m
+replicaset.extensions/nginx-default-backend-74f9cd546d   1         1         1         1m
+
+NAME                                    DESIRED   CURRENT   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/ingress-nginx           3         3         3            3           1m
+deployment.apps/nginx-default-backend   1         1         1            1           1m
+
+NAME                                               DESIRED   CURRENT   READY     AGE
+replicaset.apps/ingress-nginx-6fbb7d9c7            3         3         3         1m
+replicaset.apps/nginx-default-backend-74f9cd546d   1         1         1         1m
+
+```
+
+Como resultado vemos que se esta ejecutando **Ingress** dentro de nuestro clúster, donde ha creado:
+* Services
+* Deployments
+* ReplicatSets
+* Pods
+
+Aún así todavía no sabemos como acceder al clúster...
+
+Uno de los dos Services que se han creado (ingress-nginx) es un **balanceador de carga**. Este tipo de servicio expone el servicio de manera externa utilizando su proveedor de cloud, en este caso AWS.
+
+Los servicios NodePort y ClusterIP, a los que se enrutará el balanceador de carga, se crearón automáticamente. Ingress es lo suficientemente inteligente, para interactuar con AWS y crearse y configurarse con el servicio ELB.
+
+Si hemos prestado atención a la salida anterior.. comprobaremos que el servicio de ingress de nginx ha mapeado el puerto 80 con el puerto **32123** TCP y el 443 con el puerto **30278**.
+
+Esto significa que desde el interior del clúster podemos enviar solicitudes HTTP a 32123 y HTTPS a 30278.Por otro lado desde que el servicio es un ELB, podemos esperar algunos cambios en la configuración de nuestro AWS ELB.
+
+Vamos a echarle un vistazo al estado de los balanceadores de carga de nuestros clúster:
+
+```
+
+    "ListenerDescriptions": [
+                {
+                    "Listener": {
+                        "InstancePort": 30278, 
+                        "LoadBalancerPort": 443, 
+                        "Protocol": "TCP", 
+                        "InstanceProtocol": "TCP"
+                    }, 
+                    "PolicyNames": []
+                }, 
+                {
+                    "Listener": {
+                        "InstancePort": 32123, 
+                        "LoadBalancerPort": 80, 
+                        "Protocol": "TCP", 
+                        "InstanceProtocol": "TCP"
+                    }, 
+                    "PolicyNames": []
+                }
+            ], 
+            ....
+            "Instances": [
+                {
+                    "InstanceId": "i-01ded2bcce0dbf335"
+                }, 
+                {
+                    "InstanceId": "i-09199069f483e29db"
+                }
+            ], 
+            "DNSName": "a55765edc6cfb11e88f850afca7f6a09-371685899.eu-west-1.elb.amazonaws.com", 
+```
+Ahora podemos ver como tenemos otro ELB a parte del de la API y que este mapea los puertos 80 y 443 a otros desde el interior del clúster hacia los nodos **workers**.
+
+Ahora necesariamente vamos a guardar el nombre del nuevo DNSName del ELB tán fácil de recordar en una variable de entorno:
+
+```
+➜  cluster CLUSTER_DNS=a55765edc6cfb11e88f850afca7f6a09-371685899.eu-west-1.elb.amazonaws.com
+```
+
+En el siguiente apartado vamos a desplegar una aplicación de demo y en donde necesitaremos usar este ELB para acceder a ella ;).
+
+
 ## **Desplegando una app de prueba**
+
+
 
 ## **Alta Disponibilidad y Tolerancia a fallos**
 
