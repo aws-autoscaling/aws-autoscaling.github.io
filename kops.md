@@ -25,7 +25,7 @@ page_nav:
         url: '/asg'
     next:
         content: Auto Scaler Kubernetes
-        url: '/autoscaler'
+        url: '/auto'
 ---
 
 ¿Qué es Kubernetes?, para abreviar solamente diré que es un sistema open source creado para la gestión
@@ -1418,10 +1418,6 @@ Por otro lado necesitariamos eliminar el S3 Bucket donde hemos almacenado siempr
 <div class="callout callout--info">
 <p><strong>No es necesario</strong>Eliminar los recursos de IAM que se crearon al principio del todo, ya que estos no tienen un coste por no usarse.O dicho de otra forma, un costo por horas.</p>
 </div>
-
-
-
-
 
 
 

@@ -44,8 +44,16 @@ grid_navigation:
       excerpt: Desplegando un clúster Kubernetes en AWS con Kops
       cta: Suena bien, cuéntame más
       url: 'kops'
+    - title: Volumenes Persistentes
+      excerpt: In progress
+      cta: Saber más
+      url: 'volumens'
     - title: Auto Scaler Kubernetes
       excerpt: Escalando automáticamente tus nodos de Kubernetes
       cta: ¿Como es posible?
-      url: 'autoscaler'
+      url: 'auto'
+    - title: EKS
+      excerpt: Escalando automáticamente tus nodos de Kubernetes
+      cta: ¿Olvidarme del Clúster?
+      url: 'eks'
 ---

@@ -5,8 +5,8 @@ keywords:
 comments: false
 
 # Hero section
-title: Auto Scaler Kubernetes
-description: Escalando automáticamente tus nodos de Kubernetes en AWS
+title: EKS
+description: Despliega automáticamente tu Clúster Kubernetes
 
 # Author box
 #author:
@@ -21,9 +21,23 @@ micro_nav: true
 # Page navigation
 page_nav:
     prev:
-        content: Kubernetes Operations
-        url: '/kops'
-#   next:
+        content: Auto Scaler Kubernetes
+        url: '/auto'
+#  next:
 #        content: Auto Scaler Kubernetes
 #        url: '/autoscaler'
 ---
+
+## ¿Qué es EKS?
+
+
+### Requisitos previos
+
+### Configurar Kubectl
+
+### Lanzando los nodos workers
+
+### Lanzando una aplicación de ejemplo
+
+### Limpiar el escenario
+
