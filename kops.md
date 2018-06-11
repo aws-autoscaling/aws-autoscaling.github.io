@@ -24,8 +24,8 @@ page_nav:
         content: Auto Scaling Groups
         url: '/asg'
     next:
-        content: Auto Scaler Kubernetes
-        url: '/auto'
+        content: Volumenes Persistentes
+        url: '/volumens'
 ---
 
 ¿Qué es Kubernetes?, para abreviar solamente diré que es un sistema open source creado para la gestión
@@ -1419,16 +1419,5 @@ Por otro lado necesitariamos eliminar el S3 Bucket donde hemos almacenado siempr
 <p><strong>No es necesario</strong>Eliminar los recursos de IAM que se crearon al principio del todo, ya que estos no tienen un coste por no usarse.O dicho de otra forma, un costo por horas.</p>
 </div>
 
-
-
-
-
-## **Volumenes Persistentes**
-
-### **Crear los volumenes en AWS**
-
-### **Los volumenes persistentes en el Clúster**
-
-### **Solicitando dichos volumenes a AWS**
 
 

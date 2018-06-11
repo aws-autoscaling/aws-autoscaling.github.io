@@ -9,10 +9,10 @@ doks:
         nav:
             - item_name: Introducción a AWS
               item_url: '/'
-            - item_name: Demo 1
-              item_url: '#'
-            - item_name: Demo 2
-              item_url: '#'
+            - item_name: Demo ASG
+              item_url: 'https://youtu.be/1rfjP2PjWpU'
+            - item_name: CA Kubernetes
+              item_url: '/auto'
     footer:
         content:
             logo:

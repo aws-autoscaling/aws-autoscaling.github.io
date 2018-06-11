@@ -17,7 +17,7 @@ buttons:
 
 # Author box
 author:
-    title: ¿Quien ha escrito esto?
+    title: Más información
     title_url: '#'
     external_url: true
     description: Carlos Jesús Sánchez Ortega
@@ -45,15 +45,11 @@ grid_navigation:
       cta: Suena bien, cuéntame más
       url: 'kops'
     - title: Volumenes Persistentes
-      excerpt: In progress
+      excerpt: Crea los volumenes en AWS EBS y los pv en Kubernetes..
       cta: Saber más
       url: 'volumens'
-    - title: Auto Scaler Kubernetes
-      excerpt: Escalando automáticamente tus nodos de Kubernetes
+    - title: Clúster Auto-Scaler
+      excerpt: Escalando automáticamente tus nodos workers en Kubernetes
       cta: ¿Como es posible?
       url: 'auto'
-    - title: EKS
-      excerpt: Escalando automáticamente tus nodos de Kubernetes
-      cta: ¿Olvidarme del Clúster?
-      url: 'eks'
 ---

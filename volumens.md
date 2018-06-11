@@ -3,15 +3,15 @@ layout: default
 keywords:
 comments: false
 title: Volumenes Persistentes
-description: In progress
+description: Crea los volumenes en AWS EBS y los pv en Kubernetes..
 micro_nav: true
 page_nav:
     prev:
-        content: AutoScaler
-        url: '/auto'
+        content: Kubernetes Kops
+        url: '/kops'
     next:
-        content: EKS
-        url: '/eks'
+        content: Clúster Auto-Scaler
+        url: '/auto'
 ---
 
 ## Mantener el estado de nuestra aplicación
@@ -37,7 +37,7 @@ Como hemos comentado en el que caso de fallo en la AZ donde se encuentre el volu
 
 Así que vamos a introducirnos un poco en la creación de los volumenes en AWS con el servicio **EBS**:
 
-### **Crear los volumenes en AWS**
+## **Crear los volumenes en AWS**
 
 Lo primero que necesitamos saber es en que zona de disponibilidad se encuentran nuestros **nodos workers**, lo podemos conseguir de la siguiente forma:
 
@@ -152,13 +152,75 @@ El hecho de que tengamos los volumenes creado en EBS y disponibles, no significa
 
 Los volumenes persistentes son también recursos del clúster, pero su **principal diferencia** es que el ciclo de vida de estos es independiente de los **Pods** por los que estén siendo utilizados.
 
-Dicho esto, vamos a crear la definición para dichos volumenes persistentes en formato YAML:
+Dicho esto, vamos a crear la definición para dichos volumenes persistentes en formato YAML, aqui teneís el [pv.yml](https://github.com/aws-autoscaling/aws-autoscaling.github.io/blob/master/yml/pv.yml)
 
 ```
+kind: PersistentVolume
+apiVersion: v1
+metadata:
+  name: manual-ebs-01
+  labels:
+    type: ebs
+spec:
+  storageClassName: manual-ebs
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadWriteOnce
+  awsElasticBlockStore:
+    volumeID: REPLACE_ME_1
+    fsType: ext4
 
+---
 ```
 
+Echando un vistazo por encima, a las especificaciones del fichero vemos:
+* storageClassName: en principio solamente para recordar el nombre de la clase de almacenamiento.
+* storage capacity: pues indicamos un valor similar a la capacidad del volumen físico, sin sobre pasar el tamaño de este.
+* accessModes: la manera en la que se monta el volumen, en este caso como lectura y escritura a la vez.
 
-### **Los volumenes persistentes en el Clúster**
+Por otro lado como sabemos que vamos a usar el servicio EBS de AWS, debemos indicar los siguientes valores:
+* volumeID: donde indicamos el id del volumen.
+* fsType: sistema de ficheros del volumen.
 
-### **Solicitando dichos volumenes a AWS**
+Ahora vamos a proceder a reemplazar los valores de los id de los volumenes y crear la definición dentro de nuestro clúster:
+
+```
+cat pv.yml \
+    | sed -e \
+    "s@REPLACE_ME_1@$VOLUME_ID_1@g" \
+    | sed -e \
+    "s@REPLACE_ME_2@$VOLUME_ID_2@g" \
+    | sed -e \
+    "s@REPLACE_ME_3@$VOLUME_ID_3@g" \
+    | kubectl create -f - \
+    --save-config --record
+
+persistentvolume "manual-ebs-01" created
+persistentvolume "manual-ebs-02" created
+persistentvolume "manual-ebs-03" created
+```
+
+Ahora comprobamos que se encuentran los volumenes persistentes disponibles en nuestro clúster:
+
+```
+➜  kubectl get pv
+NAME            CAPACITY   ACCESS MODES   RECLAIM POLICY   STATUS      CLAIM     STORAGECLASS   REASON    AGE
+manual-ebs-01   10Gi       RWO            Retain           Available             manual-ebs               1m
+manual-ebs-02   10Gi       RWO            Retain           Available             manual-ebs               1m
+manual-ebs-03   10Gi       RWO            Retain           Available             manual-ebs               1m
+```
+
+Bien ahora tenemos los volumenes creados en AWS y los volumenes persistentes creados en nuestro clúster disponibles, pero no están siendo utilizados. Hasta que alguién los reclame para su uso.
+
+En la figura se refleja lo que hemos realizado en los pasos anteriores:
+
+<p align="center">
+    <img src="/images/Figura22.png" alt="Los volumenes persistentes asociados a los volumenes de EBS">
+</p>
+<p align="center">
+    <b>Figura 22 - Los volumenes persistentes asociados a los volumenes de EBS</b>
+</p>
+
+En este proyecto no vamos a entrar en detalles de como se reclaman, pero básicamente habría que utilizar el recurso de ```PersistentVolumeClaim```.
+
