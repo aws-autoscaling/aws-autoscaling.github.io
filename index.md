@@ -16,11 +16,11 @@ buttons:
       external_url: false
 
 # Author box
-author:
-    title: Más información
-    title_url: '#'
-    external_url: true
-    description: Carlos Jesús Sánchez Ortega
+#author:
+#    title: Más información
+#    title_url: '#'
+#    external_url: true
+#    description: Carlos Jesús Sánchez Ortega
 
 # Grid navigation
 grid_navigation:
