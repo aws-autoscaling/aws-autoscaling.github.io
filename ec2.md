@@ -33,9 +33,9 @@ page_nav:
 
 ### **SECURITY GROUPS**
 
-Un security group o grupo de seguridad no es más que un firewall lógico que nos proporciona AWS, para poder controlar los permisos a la hora de interconectar las instancias o servicios independientemente de la subnet que se encuentren. Por ejemplo como se vió en el apartado anterior de **Networking** la idea es que las instancias publicas sean las únicas que puedan acceder al puerto **3306** donde se encuentra escuchando un servidor mysql. El caso sería que el **Security Group** de donde se encuentra la base de datos, tendria que permitir la entrada de tráfico a ese puerto a los **grupos de seguridad** asociados a las instancias públicas.
+Un security group o grupo de seguridad no es más que un firewall lógico que nos proporciona AWS, para poder controlar los permisos a la hora de interconectar las instancias o servicios independientemente de la subnet que se encuentren. Por ejemplo como se vió en el apartado anterior de **Networking** la idea es que las instancias públicas sean las únicas que puedan acceder al puerto **3306** donde se encuentra escuchando un servidor mysql. El caso sería que el **Security Group** de donde se encuentra la base de datos, tendría que permitir la entrada de tráfico a ese puerto a los **grupos de seguridad** asociados a las instancias públicas.
 
-En primer lugar creariamos el **security group**, donde seleccionamos también la VPC donde se crearía este:
+En primer lugar crearíamos el **security group**, donde seleccionamos también la VPC donde se crearía este:
 ```
 # aws ec2 create-security-group --group-name "SG-Web" \
     --description "SG para los servidores web frontales" \
@@ -50,15 +50,15 @@ Habilitar el puerto 80 TCP para el público en este **security group** para que 
     --protocol tcp --port 80 --cidr 0.0.0.0/0
 ```
 <div class="callout callout--info">
-<p><strong>Nota:</strong> Si quisieramos acceder por SSH a la instancia EC2, debemos habilitar el puerto tcp 22 en este grupo de seguridad.</p>
+<p><strong>Nota:</strong> Si quisiéramos acceder por SSH a la instancia EC2, debemos habilitar el puerto tcp 22 en este grupo de seguridad.</p>
 </div>
 
-Tambien podemos añadirle una etiqueta a dicho security group:
+También podemos añadirle una etiqueta a dicho security group:
 ```
 aws ec2 create-tags --resources "sg-0d035270" \
     --tags Key=Name,Value="SG-Web"
 ```
-Por otro lado, crear el security group para las bases de datos **privadas**, donde se encuentraría la base de datos:
+Por otro lado, crear el security group para las bases de datos **privadas**, donde se encontraría la base de datos:
 ```
 # aws ec2 create-security-group --group-name "SG-BBDD" \
     --description "SG para los servidores de bases de datos" \
@@ -72,12 +72,12 @@ Ahora tocaría permitir que el **security group** de instancias públicas, pueda
 aws ec2 authorize-security-group-ingress --group-id "sg-2f3b6a52" \
     --protocol tcp --port 3306 --source-group "sg-0d035270"
 ```
-Etiquetar el nuevo grupo de seguridad para reconocerlo más facilmente desde la consola:
+Etiquetar el nuevo grupo de seguridad para reconocerlo más fácilmente desde la consola:
 ```
 aws ec2 create-tags --resources "sg-2f3b6a52" \
     --tags Key=Name,Value="SG-BBDD"
 ```
-Llegados a este punto ya tendriamos perfertamente nuestos security groups para las instancias que serán servidores web (públicos) y otro para los servidores de base de datos (privados).
+Llegados a este punto ya tendríamos perfertamente nuestos security groups para las instancias que serán servidores web (públicos) y otro para los servidores de base de datos (privados).
 
 
 ### **Instancias EC2**
@@ -98,8 +98,8 @@ Por otro lado comentar a favor de AWS, la gran variedad de tipos de instancias q
 
  * Una **AMI** bien sea un sistema operativo base o una AMI personalizada.
  * Una **VPC** que como ya se ha comentado, se crea una por defecto en la creación de la cuenta. Aún así tiene sentido que sea necesario al menos una ¿no?. Ya que es nuestro "CPD físico".
- * Un **security group** , nuestro volumén ```firewall lógico```.
- * Un **volumén o disco duro** como queraís llamarlo, también algo lógico ya que la instancia necesitaria albergar el sistema operativo y sus datos en algún lado :). La solicitud del nuevo volumén se hace al subservicio **EBS**, que veremos tranquilamente en el siguiente apartado.
+ * Un **security group** , nuestro volumen ```firewall lógico```.
+ * Un **volumen o disco duro** como queráis llamarlo, también algo lógico ya que la instancia necesitaría albergar el sistema operativo y sus datos en algún lado :). La solicitud del nuevo volumen se hace al subservicio **EBS**, que veremos tranquilamente en el siguiente apartado.
  * Por último **Access Keys** o par de claves para conectarnos remotamente a la instancia posteriormente a su creación por el servicio SSH, podemos crear un par de claves nuevos en el momento de la creación de la instancia EC2 o elegir un par ya creado previamente en nuestra cuenta.
 
 Vamos a lanzar una instancia EC2, con un imagen del sistema linux, más concretamente se le denomina "Amazon Linux" y digamos que es el resultado de una CentOS con una capa de personalización de AWS ;).
@@ -190,17 +190,17 @@ Una vez se cree, como dijimos en el apartado anterior de security groups, debemo
 # aws ec2 authorize-security-group-ingress --group-id sg-0d035270 \
     --protocol tcp --port 22 --cidr 87.221.175.124/32
 ```
-Ya solo nos faltaria para conectarnos remotamente, usar el endpoint que nos proporciona AWS para dicha instancia EC2, en este caso habria que utilizar el usuario **ec2-user** que es el usuario predeterminado de la AMI que he usado y tener la clave privada en nuestra máquina anfitriona.
+Ya solo nos faltaría para conectarnos remotamente, usar el endpoint que nos proporciona AWS para dicha instancia EC2, en este caso habria que utilizar el usuario **ec2-user** que es el usuario predeterminado de la AMI que he usado y tener la clave privada en nuestra máquina anfitriona.
 
 <div class="callout callout--info">
-<p><strong>Recordatorio:</strong> Si la instancia se reinicia, variará el endpoint, por lo tanto no nos podremos conectar a través del endpoint o la dirección IP pública dinamica que tuviera asociada dicha instancia. Si por cualquier motivo no quisieramos que esto variará deberiamos asociarle posteriormente a la creación de la máquina una <strong>Elastic IP</strong></p>
+<p><strong>Recordatorio:</strong> Si la instancia se reinicia, variará el endpoint, por lo tanto no nos podremos conectar a través del endpoint o la dirección IP pública dinamica que tuviera asociada dicha instancia. Si por cualquier motivo no quisiéramos que esto variara, deberiamos asociarle posteriormente a la creación de la máquina una <strong>Elastic IP</strong></p>
 </div>
 
 ### **EBS**
 
-EBS es el servicio que básicamente administra y crea los volumenes necesarios para las instancias. Obviamente es posible asociar un nuevo disco a una instancia ya lanzada, como a una instancia que estamos creando. Eligiendo así en su creación tanto el **disco raíz** como otros volumenes si quisieramos.
+EBS es el servicio que básicamente administra y crea los volúmenes necesarios para las instancias. Obviamente es posible asociar un nuevo disco a una instancia ya lanzada, como a una instancia que estamos creando. Eligiendo así en su creación tanto el **disco raíz** como otros volúmenes si quisiéramos.
 
-Así que partiendo de la base que tenemos una instancia corriendo, vamos a re-utilizar la EC2 anterior, asociandole un nuevo volumen, para ello primero habrá que crearlo:
+Así que partiendo de la base que tenemos una instancia corriendo, vamos a re-utilizar la EC2 anterior, asociándole un nuevo volumen, para ello primero habrá que crearlo:
 
 Así que vamos a proceder a crear dicho volumen, pero esta vez vamos a etiquetar el recurso a la par que lo creamos, hasta ahora estabamos etiquetando nuestro recurso después de su creación:
 
@@ -275,7 +275,7 @@ tmpfs            494M      0  494M   0% /dev/shm
 /dev/xvda1       7,8G   1,1G  6,7G  14% /
 ```
 
-Esto sedebe a que el volumen asociado, esta conectado a la instancia pero no esta montado en ningún lugar del sistema, si ejecutamos la siguiente instrucción vemos los volumenes disponibles en la instancia:
+Esto se debe a que el volumen asociado, esta conectado a la instancia pero no esta montado en ningún lugar del sistema, si ejecutamos la siguiente instrucción vemos los volúmenes disponibles en la instancia:
 
 ```
 [ec2-user@ip-10-0-1-185 ~]$ lsblk -f
@@ -294,7 +294,7 @@ Por lo tanto, antes de seguir y montar dicho volumen en un punto de montaje, ten
 <p><strong>Nota:</strong> el volumen es solo necesario formatearlo después de su creación, una vez ya hayamos hecho esta acción en el volumen no será necesario, ya que a partir de ese momento podemos desasociar el volumen de la instancia y asociarlo a otra.</p>
 </div>
 
-Ya si lo montariamos en algun lugar y comprobariamos que efectivamente se ha detectado dicho volumen:
+Ya si lo montaríamos en algún lugar y comprobaríamos que efectivamente se ha detectado dicho volumen:
 
 ```
 [ec2-user@ip-10-0-1-185 ~]$ sudo mount /dev/xvdb /mnt/

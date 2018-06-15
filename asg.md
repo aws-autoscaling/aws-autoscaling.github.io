@@ -52,11 +52,11 @@ aws ec2 run-instances --image-id ami-ca0135b3 --count 1 \
     --security-group-ids sg-0d035270 \
     --user-data file://script.txt
 ```
-Ahora si escribimos la dirección IP Pública que nos ha asignado la subnet pública a nuestra instancia y hemos configurado en los apartados anteriores la apertura del puerto 80 tcp a a dicha subnet. Deberiamos ser capaces de ver la página predeterminada del apache de la AMI **Amazon Linux**.
+Ahora si escribimos la dirección IP Pública que nos ha asignado la subnet pública a nuestra instancia y hemos configurado en los apartados anteriores la apertura del puerto 80 tcp a a dicha subnet. Deberíamos ser capaces de ver la página predeterminada del apache de la AMI **Amazon Linux**.
 
 ### **Launch Configuration**
 
-Para poder auto escalar una aplicación en amazon, lo primero que necesitamos configurar es el **Launch Configuration** que no es más que una plantilla de como queremos que se levanten nuestras instancias en el Auto Scaling. Permitiendonos así poder levantar nuevas instancias identicas, sin necesidad de tener que configurar manualmente una por una.
+Para poder auto escalar una aplicación en amazon, lo primero que necesitamos configurar es el **Launch Configuration** que no es más que una plantilla de como queremos que se levanten nuestras instancias en el Auto Scaling. Permitiéndonos así poder levantar nuevas instancias identicas, sin necesidad de tener que configurar manualmente una por una.
 
 Así que para crear un launch configuration, primero necesitamos una AMI base, la cual vamos a utilizar la AMI de Amazon Linux donde hemos instalado el servidor apache en nuestra instancia EC2 anterior:
 
@@ -87,7 +87,7 @@ aws autoscaling create-launch-configuration \
 ```
 
 <div class="callout callout--info">
-<p><strong>Observación:</strong> A la hora de crear el "Launch Configuration" podemos indicarle como parametro la opción de "user data" por si quisieramos que las nuevas instancias hicieran algo especial a la hora de iniciarse o realizar algún tipo de comprobación, como por ejemplo, descargar el código de la aplicación de un repositorio externo o algo similar.</p>
+<p><strong>Observación:</strong> A la hora de crear el "Launch Configuration" podemos indicarle como parametro la opción de "user data" por si quisiéramos que las nuevas instancias hicieran algo especial a la hora de iniciarse o realizar algún tipo de comprobación, como por ejemplo, descargar el código de la aplicación de un repositorio externo o algo similar.</p>
 </div>
 
 Ahora si que si procedemos a crear el **Auto Scaling Group** a partir del launch anterior, dsdsdsds:
@@ -102,13 +102,13 @@ aws autoscaling create-auto-scaling-group --auto-scaling-group-name "web-servers
     --tags "ResourceId=web-servers,ResourceType=auto-scaling-group,Key=Name,Value=web-server,PropagateAtLaunch=true"
 ```
 
-Ya tendriamos creado nuestro primero ASG, pero si es verdad que tendriamos que cambiar los valores manualmente, para que el número de instancias dentro del **Auto Scaling Group** variase, ya que hemos definido que el mínimo de instancia que haya siempre levantada de ese ASG, es de una instancia, como estado deseado 1 y máximo 2. Pero la realidad es que nunca va a escalar a 2 a no ser que cambiemos nosotros este valor manualmente.
+Ya tendríamos creado nuestro primero ASG, pero si es verdad que tendríamos que cambiar los valores manualmente, para que el número de instancias dentro del **Auto Scaling Group** variase, ya que hemos definido que el mínimo de instancia que haya siempre levantada de ese ASG, es de una instancia, como estado deseado 1 y máximo 2. Pero la realidad es que nunca va a escalar a 2 a no ser que cambiemos nosotros este valor manualmente.
 
-La idea siguiente es, la de que esto escale de manera automática pudiendose basar en algún tipo de información como por ejemplo dependiendo de el % de uso de CPU de la instancia, si esta se ve comprometida a más del 70% se vaya levantando paralelamente una segunda instancia. También es posible añadir una notificación y que nos avise a nuestro correo en caso de que se dispare el auto escalado de nuestro **ASG**.
+La idea siguiente es, la de que esto escale de manera automática pudiéndose basar en algún tipo de información como por ejemplo dependiendo de el % de uso de CPU de la instancia, si esta se ve comprometida a más del 70% se vaya levantando paralelamente una segunda instancia. También es posible añadir una notificación y que nos avise a nuestro correo en caso de que se dispare el auto escalado de nuestro **ASG**.
 
 ### **Actualizar el Auto Scaling Group**
 
-Imagenemos que necesitamos cambiar algo del código o algún paquete en el sistema que estamos utilizando como base en nuestra AMI que utiliza el Launch Configuration.
+Imaginemos que necesitamos cambiar algo del código o algún paquete en el sistema que estamos utilizando como base en nuestra AMI que utiliza el Launch Configuration.
 
 Debemos realizar los siguientes pasos, vamos a partir con que nuestro servidor apache que corre en las instancias EC2 de nuestro Auto Sscaling Group, esta utilizando la página predeterminada. La idea es cambiar esto y que las nuevas instancias que se levanten en el sistema ya tengan la nueva plantilla html.
 
@@ -158,14 +158,14 @@ aws autoscaling delete-launch-configuration \
     --launch-configuration-name "launch-web"
 ```
 
-A partir de ahora  todas las instancias nuevas que levantarán el **Auto Scaling Group** tendrian como imagen base la nueva AMI con la modificación en el fichero html. Para llevar a cabo esto y sin perder la disponibilidad de la primera instancia, necesitamos cambiar el número deseado de instancias en el ASG.
+A partir de ahora  todas las instancias nuevas que levantarán el **Auto Scaling Group** tendrían como imagen base la nueva AMI con la modificación en el fichero html. Para llevar a cabo esto y sin perder la disponibilidad de la primera instancia, necesitamos cambiar el número deseado de instancias en el ASG.
 
 En el caso que se esta siguiendo en este proyecto, fijamos los valores de la siguiente forma:
 * Min: 1
 * Desired: 1
 * Max: 2
 
-Solamente tendriamos que cambiar el valor de **Desired** a 2, y se nos lanzaria automaticamente una nueva instancia EC2 con la nueva plantilla:
+Solamente tendríamos que cambiar el valor de **Desired** a 2, y se nos lanzaría automáticamente una nueva instancia EC2 con la nueva plantilla:
 
 ```
 aws autoscaling update-auto-scaling-group \
@@ -202,7 +202,7 @@ aws ec2 describe-instances --instance-id i-09cd718886fa5a4b1 \
     ]
 ```
 
-Bueno y después de ver esto, creo que viene una pregunta lógica y es ¿y si tengo mi aplicación web corriendo en más de 1 instancia?, ¿que tengo que introduccir la dirección IP Pública de todas las instancias manualmente?.
+Bueno y después de ver esto, creo que viene una pregunta lógica y es ¿y si tengo mi aplicación web corriendo en más de 1 instancia?, ¿qué tengo que introduccir la dirección IP Pública de todas las instancias manualmente?.
 
 Pues no, para eso existe el servicio **Elastic Load Balancer**, que nos permitirá integrar un balanceador de carga en el frontal de nuestras instancias EC2, redireccionando las peticiones a nuestros servidores web y balanceando la carga de manera transparente a nosotros. Y al fin y al cabo solamente utilizar un **endpoint** para acceder a nuestra aplicación.
 
@@ -264,22 +264,22 @@ Finalmente si accedemos desde una navegador a la URL del balanceador de carga qu
 
 Es el servicio encargado de recopilar métricas y estadisticas del resto de servicios. Como por ejemplo, con sumo de cpu, latencia, métricas relacionadas con el balanceador de carga, todas estas métricas son importadas a CloudWatch. 
 
-Una parte buena es la posibilidad de crear alertas que salten cuando se cumpla una condición sobre una métricas predeterminada. En relación con nuestro **Auto Scaling Group** podemos agregar un **disparador** para que cuando la media de uso de cpu de las instancias que se encuentren dentro del ASG se dispare por encima de un **porcentaje** determinado, automaticamente se levanten **más** instancias y en periodos de una carga baja de cpu escalemos hacía abajo en número de instancias.
+Una parte buena es la posibilidad de crear alertas que salten cuando se cumpla una condición sobre una métricas predeterminada. En relación con nuestro **Auto Scaling Group** podemos agregar un **disparador** para que cuando la media de uso de cpu de las instancias que se encuentren dentro del ASG se dispare por encima de un **porcentaje** determinado, automáticamente se levanten **más** instancias y en periodos de una carga baja de cpu escalemos hacía abajo en número de instancias.
 
-Bien desde que para visualizar las métricas, necesitamos visualizar gráficos nos olvidamos de momento por la línea de comandos y obviamente tenemos que acceder a la consola de AWS. Por otro lado aunque **CloudWatch** dispone de su propio apartado para crear **dashboards** y personalizarlos con métricas de los diferentes servicios que estemos utilizando a nuestro gusto. Desde el apartado de **EC2**, si marcamos una instancia en concreto, en la pestaña **Monitoring** podemos ver una preview de algúnas métricas de la instancia en cuestión.
+Bien desde que para visualizar las métricas, necesitamos visualizar gráficos nos olvidamos de momento por la línea de comandos y obviamente tenemos que acceder a la consola de AWS. Por otro lado aunque **CloudWatch** dispone de su propio apartado para crear **dashboards** y personalizarlos con métricas de los diferentes servicios que estemos utilizando a nuestro gusto. Desde el apartado de **EC2**, si marcamos una instancia en concreto, en la pestaña **Monitoring** podemos ver una preview de algunas métricas de la instancia en cuestión.
 
 <p align="center">
     <img src="/images/Figura6.png" alt="Monitoring Preview Instancia EC2">
 </p>
 <p align="center">
-    <b>Figura 6 - Prevía Métricas de Monitorización</b>
+    <b>Figura 6 - previa Métricas de Monitorización</b>
 </p>
 
 <div class="callout callout--info">
-<p><strong>Nota:</strong> Si os fijaís en la imagen anterior, tengo habilitado la opción **Detailed monitoring**. Esto simplemente graba y presenta los datos de la métrica, pudiendose representar cada minuto y no cada 5 minutos que es como esta configurado de manera predeterminada.</p>
+<p><strong>Nota:</strong> Si os fijáis en la imagen anterior, tengo habilitado la opción **Detailed monitoring**. Esto simplemente graba y presenta los datos de la métrica, pudiéndose representar cada minuto y no cada 5 minutos que es como esta configurado de manera predeterminada.</p>
 </div>
 
-Al igual que en EC2 tenemos una prevía de las métricas, en el apartado del **ELB** también disponemos de esa característica, donde se refleja la latencia, el número de peticiones, o el número de peticiones de un código http como (2XXs,4XXs y 5XXs). O el número de instancias saludables que tenemos detrás del balanceador para poder recibir peticiones.
+Al igual que en EC2 tenemos una previa de las métricas, en el apartado del **ELB** también disponemos de esa característica, donde se refleja la latencia, el número de peticiones, o el número de peticiones de un código http como (2XXs,4XXs y 5XXs). O el número de instancias saludables que tenemos detrás del balanceador para poder recibir peticiones.
 
 <p align="center">
     <img src="/images/Figura7.png" alt="Monitoring Preview ELB">
@@ -290,7 +290,7 @@ Al igual que en EC2 tenemos una prevía de las métricas, en el apartado del **E
 
 Por supuesto desde **CloudWatch** tenemos acceso a algunas métricas que no están disponibles desde el panel de EC2 o ELB.
 
-Pero si es cierto, que hay dos métricas a mi parecer, que no nos proporciona **CloudWatch** sobre nuestras instancias EC2 y son el **uso de memoria ram** y el **espacio en disco**. Aún así, podemos hacer uso de unos scripts programados en el lenguaje **perl** para que podamos recopilar esta información y mandarsela a CloudWatch.
+Pero si es cierto, que hay dos métricas a mi parecer, que no nos proporciona **CloudWatch** sobre nuestras instancias EC2 y son el **uso de memoria ram** y el **espacio en disco**. Aún así, podemos hacer uso de unos scripts programados en el lenguaje **perl** para que podamos recopilar esta información y mandársela a CloudWatch.
 
 Estos scripts son compatibles tanto con la AMI de Amazon Linux, como de sistemas operativos como SUSE,Ubuntu o Red Hat.
 
@@ -298,7 +298,7 @@ En el siguiente enlace viene explicado lo necesitario para instalar dichos scrip
 
 [https://docs.aws.amazon.com/es_es/AWSEC2/latest/UserGuide/mon-scripts.html](https://docs.aws.amazon.com/es_es/AWSEC2/latest/UserGuide/mon-scripts.html)
 
-A continuación os dejo un video, donde hago uso de los servicios citados anteriormente en el proyecto y se puede ver el uso de un **Auto Scaling Group** y ver como automaticamente se levanta una nueva instancia exacta de la ya existente cuando el **uso de cpu de la instancia se eleva a un % determinado**.
+A continuación os dejo un video, donde hago uso de los servicios citados anteriormente en el proyecto y se puede ver el uso de un **Auto Scaling Group** y ver como automáticamente se levanta una nueva instancia exacta de la ya existente cuando el **uso de cpu de la instancia se eleva a un % determinado**.
 
 ### **Video Demostrativo**
 

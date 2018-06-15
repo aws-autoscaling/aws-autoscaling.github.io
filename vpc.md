@@ -40,7 +40,7 @@ La traducción de las siglas corresponde a “Virtual Private Cloud”, lo que p
 Por lo que cabe deducir es inevitable tener al menos 1 VPC en nuestra cuenta de AWS y tal es así, que
 por defecto nos trae una VPC creada. Nosotros mismos podemos escoger el direccionamiento de red privado hasta un máximo de un CIDR /16, dentro de la VPC podemos segmentar y crear subnets según nuestra necesidad.
 
-Las subnets pueden ser privada o públicas, por ejemplo, supongamos que nuestra aplicación tiene una parte web y otra con la base de datos. Para mayor seguridad y mejor práctica se colocaría la base de datos en una subnet privada, donde solo tendría permiso de acceso las instancias que se crearán en una subnet publica en concreto y prohibiendo el acceso remoto desde fuera hacia la base de datos. A estas últimas instancias que se levantarán dentro de la subnet pública se les repartiría de forma automática direccionamiento IP público.
+Las subnets pueden ser privada o públicas, por ejemplo, supongamos que nuestra aplicación tiene una parte web y otra con la base de datos. Para mayor seguridad y mejor práctica se colocaría la base de datos en una subnet privada, donde solo tendría permiso de acceso las instancias que se crearán en una subnet pública en concreto y prohibiendo el acceso remoto desde fuera hacia la base de datos. A estas últimas instancias que se levantarán dentro de la subnet pública se les repartiría de forma automática direccionamiento IP público.
 
 Otro detalle es que las VPC se ubican dentro de una región y las subnets se localizan dentro de una zona
 de disponibilidad. Se pueden crear subnets siempre y cuando no superemos el límite del direccionamiento de red elegido a
@@ -181,7 +181,7 @@ Ahora para que realmente las subnets públicas, sean públicas de verdad, tendre
 --subnet-id "subnet-2364e76b" --map-public-ip-on-launch
 ```
 
-Por defecto las **subnets** comparten una misma tabla de enrutamiento de manera predeterminada, que se crea automáticamente con la VPC por defecto. Pero es posible crear una **tabla de enrutamiento** para una subnet especifica.
+Por defecto las **subnets** comparten una misma tabla de enrutamiento de manera predeterminada, que se crea automáticamente con la VPC por defecto. Pero es posible crear una **tabla de enrutamiento** para una subnet específica.
 
 ### **Routing Table**
 
@@ -264,7 +264,7 @@ Y asociamos la tabla de enrutamiento a las dos subnets públicas:
 
 #### **Private Routing Table**
 
-Hariamos lo mismo, creando una tabla de enrutamiento, que asociariamos a las subnets privadas:
+Haríamos lo mismo, creando una tabla de enrutamiento, que asociariamos a las subnets privadas:
 
 ```
 # aws ec2 create-route-table --vpc-id "vpc-fd6f139b"
@@ -306,9 +306,9 @@ Asociar a las redes privadas:
 
 ### **Internet Gateway**
 
-Es el punto de conexión entre los recursos de VPC para conectar las instancias a internet, como minimo tenemos que tener una subnet publica, con una tabla de routas que tengan asociada un internetgat como ruta default.
+Es el punto de conexión entre los recursos de VPC para conectar las instancias a internet, como mínimo tenemos que tener una subnet pública, con una tabla de routas que tengan asociada un internetgat como ruta default.
 
-Además de tener IG, las instancias que creemos dentro la subnet deben tener IP Publicas, el IG es automaticamente gestionado y escalado por Amazon y lo único que hay que hacer es asociarlo a una Route Table.
+Además de tener IG, las instancias que creemos dentro la subnet deben tener IP Públicas, el IG es automaticamente gestionado y escalado por Amazon y lo único que hay que hacer es asociarlo a una Route Table.
 
 <div class="callout callout--info">
 <p><strong>Nota:</strong> solamente puede haber un **IG** asocicado a una **VPC determinada**</p>
@@ -369,7 +369,7 @@ Para solicitar una Elastic IP en nuestra cuenta, más concretamente en la regió
     "AllocationId": "eipalloc-dcc786e1"
 }
 ```
-Si quisieramos asociar dicha **IP** a una instancia sería de la siguiente forma:
+Si quisiéramos asociar dicha **IP** a una instancia sería de la siguiente forma:
 
 ```
 aws opsworks --region eu-west-1 associate-elastic-ip \
@@ -385,18 +385,18 @@ O si de lo contrario nos gustaria liberar esa **Elastic IP**:
 
 ### **NAT Gateway**
 
-Como hacer que los recursos que se creen en subnets privadas, incluso sin tener ip publicas, puedan ser capaces de acceder a internet. Por ejemplo si tenemos instancias dentro de subnets privadas y necesitamos actualizar el sistema, paquetes, etc.. O si necesitamos que la instancia que se encuentra en la subnet privada necesite conectarse a un endpoint o a una api.
+Como hacer que los recursos que se creen en subnets privadas, incluso sin tener ip públicas, puedan ser capaces de acceder a internet. Por ejemplo si tenemos instancias dentro de subnets privadas y necesitamos actualizar el sistema, paquetes, etc.. O si necesitamos que la instancia que se encuentra en la subnet privada necesite conectarse a un endpoint o a una api.
 
-Evitando así tener que contratar IPs Publicas para estos casos.
+Evitando así tener que contratar IPs Públicas para estos casos.
 
-Tiene que crearse en una subnet publica que tenga en su Route table, la ruta por defecto el IG.
+Tiene que crearse en una subnet pública que tenga en su Route table, la ruta por defecto el IG.
 
-Si por ejemplo vamos a consumir un recurso de terceros y este valida la dirección Ip pública, si tuvieramos un grupo de auto-escalado y pasaramos de tener de 2 instancias a tener hasta 30. Por ejemplo nos dejaria de funcionar un servicio externo porque algunos incluso tienen un limite de validación de 2-3 Ips Publicas.
+Si por ejemplo vamos a consumir un recurso de terceros y este válida la dirección Ip pública, si tuvieramos un grupo de auto-escalado y pasáramos de tener de 2 instancias a tener hasta 30. Por ejemplo nos dejaría de funcionar un servicio externo porque algunos incluso tienen un limite de validación de 2-3 Ips Públicas.
 
-Esto se evita utilizando el NAT GAteway, ya que tiene una ip publica y estatica.
+Esto se evita utilizando el NAT GAteway, ya que tiene una ip pública y estatica.
 
 
-Crear el NAT Gateway dentro de una subnet pública, debemos coger el valor de **allocation-id** que nos devolvio cuando creamos antes la Elastic IP, para poder asociarla con el nuevo **NAT Gateway**:
+Crear el NAT Gateway dentro de una subnet pública, debemos coger el valor de **allocation-id** que nos devolvió cuando creamos antes la Elastic IP, para poder asociarla con el nuevo **NAT Gateway**:
 ```
 # aws ec2 create-nat-gateway --subnet-id subnet-88c87aee \
     --allocation-id eipalloc-dcc786e1
@@ -419,7 +419,7 @@ Crear el NAT Gateway dentro de una subnet pública, debemos coger el valor de **
 <p><strong>Nota:</strong> la subnet pública, debe tener en su tabla de encaminamiento como ruta por defecto el Internet Gateway.</p>
 </div>
 
-Ahora nos tocara añadir como ruta por defecto a la tabla de enrutamiento de una subnet privada, el NAT Gateway:
+Ahora nos tocará añadir como ruta por defecto a la tabla de enrutamiento de una subnet privada, el NAT Gateway:
 
 ```
 # aws ec2 create-route --route-table-id "rtb-71f66f08" \

@@ -40,7 +40,7 @@ ZONES=eu-west-1a
 ```
 ### Eliminar el clúster antiguo
 
-Borramos el clúster anteriores si lo tuvieramos:
+Borramos el clúster anteriores si lo tuviéramos:
 
 ```
 ➜  kops delete cluster \
@@ -243,7 +243,7 @@ cluster-autoscaler-1251066907-d49gh                                   1/1       
 
 ### Desplegar una aplicación demo
 
-Vamos a utilizar una aplicación demo de la documentación de Kubernetes, básicamente es una imagen docker personalizada basada en un **apache con php**. En su interior aloja un **index.php** que lo que tiene es un bucle con un calcúlo exponencial, para ir aumentando el uso de cpu.
+Vamos a utilizar una aplicación demo de la documentación de Kubernetes, básicamente es una imagen docker personalizada basada en un **apache con php**. En su interior aloja un **index.php** que lo que tiene es un bucle con un cálculo exponencial, para ir aumentando el uso de cpu.
 
 ```
 kubectl run php-apache --image=gcr.io/google_containers/hpa-example \
@@ -310,7 +310,7 @@ while true; do wget -q -O- http://100.68.217.24; done
 ```
 ### Verificar que nuestro clúster y los pods de la aplicación se auto escalan
 
-Acto seguido, al poco tiempo si vamos comprobando el numero de replicas iran creciendo con el paso del tiempo hasta el máximo de 20 pods que hemos fijado, podemos consultar:
+Acto seguido, al poco tiempo si vamos comprobando el numero de replicas irán creciendo con el paso del tiempo hasta el máximo de 20 pods que hemos fijado, podemos consultar:
 
 Los pods:
 
@@ -331,7 +331,7 @@ php-apache-593471247-q41r0   1/1       Running   0          10m
 php-apache-593471247-vdlfj   1/1       Running   0          2m
 ```
 
-Y por otro lado monitorizar, como va elevandose el uso de cpu y va aumentando el número de replicas, a medida que dispone de nodos nuevos para levantar dentro de él, los pods:
+Y por otro lado monitorizar, como va elevándose el uso de cpu y va aumentando el número de replicas, a medida que dispone de nodos nuevos para levantar dentro de él, los pods:
 
 ```
                                                    
