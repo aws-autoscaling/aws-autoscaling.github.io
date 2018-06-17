@@ -11,8 +11,8 @@ doks:
               item_url: '/'
             - item_name: Demo ASG
               item_url: 'https://youtu.be/1rfjP2PjWpU'
-            - item_name: CA Kubernetes
-              item_url: '/auto'
+            - item_name: Demo CA
+              item_url: 'https://youtu.be/HhN4E4zXpJU'
     footer:
         content:
             logo:
