@@ -96,9 +96,9 @@ Verificamos que los nodos estan disponibles en nuestro clúster:
 ```
 ➜  kubectl get nodes
 NAME                                          STATUS     ROLES     AGE       VERSION
-ip-172-20-39-165.eu-west-1.compute.internal   Ready      master    1m        v1.9.6
-ip-172-20-42-153.eu-west-1.compute.internal   Ready   node      20s       v1.9.6
-ip-172-20-44-25.eu-west-1.compute.internal    Ready      node      24s       v1.9.6
+ip-172-20-39-165.eu-west-1.compute.internal   Ready      master    1m        v1.7.6
+ip-172-20-42-153.eu-west-1.compute.internal   Ready      node      20s       v1.7.6
+ip-172-20-44-25.eu-west-1.compute.internal    Ready      node      24s       v1.7.6
 ```
 ### Desplegar un add-on para monitorzar dentro del clúster
 
