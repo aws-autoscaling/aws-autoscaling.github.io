@@ -31,10 +31,6 @@ page_nav:
 
 ## **NETWORKING - VPC**
 
-<p align="center">
-    <img style="width:40px" src="/images/aws/vpc.png" alt="AWS VPC Icon">
-</p>
-
 La traducción de las siglas corresponde a “Virtual Private Cloud”, lo que podríamos decir que este componente simula una red privada o como si fuera nuestra propia red dentro de un centro de datos. Sería un segmento de red aislado de las otras VPC’s que tuviéramos creadas.
 
 Por lo que cabe deducir es inevitable tener al menos 1 VPC en nuestra cuenta de AWS y tal es así, que
