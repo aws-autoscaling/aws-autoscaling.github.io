@@ -90,7 +90,7 @@ aws autoscaling create-launch-configuration \
 <p><strong>Observación:</strong> A la hora de crear el "Launch Configuration" podemos indicarle como parametro la opción de "user data" por si quisiéramos que las nuevas instancias hicieran algo especial a la hora de iniciarse o realizar algún tipo de comprobación, como por ejemplo, descargar el código de la aplicación de un repositorio externo o algo similar.</p>
 </div>
 
-Ahora si que si procedemos a crear el **Auto Scaling Group** a partir del launch anterior, dsdsdsds:
+Ahora si que si procedemos a crear el **Auto Scaling Group** a partir del launch anterior:
 
 ```
 aws autoscaling create-auto-scaling-group --auto-scaling-group-name "web-servers" \
